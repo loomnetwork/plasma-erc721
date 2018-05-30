@@ -647,7 +647,7 @@ contract("Plasma ERC721", async function(accounts) {
         return [to_bob, tree_bob, to_charlie, tree_charlie];
     }
 
-    async function elliotInvalidHistoryExit() {
+  async function elliotInvalidHistoryExit() {
         let utxo_slot = 2;
         let to_bob = createUTXO(utxo_slot, 3, alice, bob);
         let tree_bob = await submitUTXO(utxo_slot, to_bob[0]);
@@ -726,7 +726,7 @@ contract("Plasma ERC721", async function(accounts) {
     
     }
 
-    function createUTXO(slot, prevBlock, from, to) {
+  function createUTXO(slot, prevBlock, from, to) {
         let data = [ slot, prevBlock, 1, to ];
         data = '0x' + RLP.encode(data).toString('hex');
         let txHash = utils.soliditySha3(data);
