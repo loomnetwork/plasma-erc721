@@ -315,8 +315,7 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
         external 
         isState(slot, State.CHALLENGED)
     {
-        challengingTransaction;
-        proof;
+        checkTxIncluded(challengingTransaction, challengingBlockNumber, proof);
 
         // Mark exit as responded, which will allow it to be finalized once it has matured
         coins[slot].state = State.RESPONDED;
