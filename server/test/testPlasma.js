@@ -375,62 +375,91 @@ contract("Plasma ERC721", async function(accounts) {
         assert.equal(withdraw.amount, web3.toWei(0.1, 'ether'));
     });
 
-    it("Challenges Charlie's exit with challengeBefore. Charlies does NOT respond", async function() {
+    it("Challenges Elliot's exit with challengeBefore. Elliot does NOT respond, as there is no way for him to have a valid proof since the tx was invalid", async function() {
         let utxo_slot = 2;
-        await charlieExitAfterTwoTransfers();
+        let bobTx = await elliotInvalidHistoryExit();
+        let to_bob = bobTx[0];
+        let tree_bob = bobTx[1];
 
         start = (await web3.eth.getBlock('latest')).timestamp;
         let expire = start + 3600 * 24 * 8; // 8 days pass, can finalize exit
 
-        // TODO: Implement proof validation
-        let challengeTx ='0x0';
-        let proof = '0x0';
-        await plasma.challengeBefore(
-                utxo_slot, challengeTx, proof, 
-                {'from': challenger, 'value': web3.toWei(0.1, 'ether')}
-        );
+        // Concatenate the 2 signatures
+        let sigs = to_alice[1] + to_bob[1].substr(2,132);
+        let tx_proof = tree_bob.createMerkleProof(utxo_slot)
 
+        let prev_tx = to_alice[0];
+        let tx = to_bob[0];
+
+        // Challenge before is essentially a challenge where the challenger submits the proof required to exit a coin, claiming that this is the last valid state of a coin. Due to bonds the challenger will only do this when he actually knows that there was an invalid spend. If the challenger is a rational player, there should be no case where respondChallengeBefore should succeed. 
+        await plasma.challengeBefore(
+                utxo_slot,
+                prev_tx , tx, // rlp encoded
+                '0x0', tx_proof, // proofs from the tree
+                sigs, // concatenated signatures
+                3, 1000, 
+                 {'from': challenger, 'value': web3.toWei(0.1, 'ether')}
+        );
 
         await increaseTimeTo(expire);
         await plasma.finalizeExits({from: random_guy2 });
-        let c = web3.eth.getBalance(charlie)
 
         // Charlie shouldn't be able to withdraw the coin.
-        assertRevert( plasma.withdraw(utxo_slot, {from : charlie }));
+        assertRevert( plasma.withdraw(utxo_slot, {from : elliot }));
 
         assert.equal((await cards.balanceOf.call(alice)).toNumber(), 2);
         assert.equal((await cards.balanceOf.call(bob)).toNumber(), 0);
         assert.equal((await cards.balanceOf.call(charlie)).toNumber(), 0);
+        assert.equal((await cards.balanceOf.call(dylan)).toNumber(), 0);
+        assert.equal((await cards.balanceOf.call(elliot)).toNumber(), 0);
         assert.equal((await cards.balanceOf.call(plasma.address)).toNumber(), 3);
 
         // On the contrary, his bond must be slashed, and `challenger` must be able to claim it
         await plasma.withdrawBonds({from: challenger });
         
-        let withdrawedBonds = plasma.WithdrawedBonds({}, {fromBlock: 0, toBlock: 'latest'});
+        let withdrawedBonds = plasma.WithdrawedBonds({}, {fromBlock: 0, toBlock: 'latest'})
         let e = await Promisify(cb => withdrawedBonds.get(cb));
         let withdraw = e[0].args;
         assert.equal(withdraw.from, challenger);
         assert.equal(withdraw.amount, web3.toWei(0.1, 'ether'));
     });
 
-    it("Challenges Charlie's exit with challengeBefore. Charlies responds in time", async function() {
+    it("Challenges Elliot's exit with challengeBefore. Elliot responds in time", async function() {
         let utxo_slot = 2;
-        await charlieExitAfterTwoTransfers();
+        let bobTx = await elliotValidHistoryExit();
+        let to_bob = bobTx[0];
+        let tree_bob = bobTx[1];
+
+        let to_charlie = bobTx[2];
+        let tree_charlie = bobTx[3];
 
         start = (await web3.eth.getBlock('latest')).timestamp;
         let expire = start + 3600 * 24 * 8; // 8 days pass, can finalize exit
 
-        // TODO: Implement proof validation
-        let challengeTx ='0x0';
-        let proof = '0x0';
+        // Concatenate the 2 signatures
+        let sigs = to_alice[1] + to_bob[1].substr(2,132);
+        let proof = tree_bob.createMerkleProof(utxo_slot)
+
+        let prev_tx = to_alice[0];
+        let tx = to_bob[0];
+
+        // Challenge before is essentially a challenge where the challenger submits the proof required to exit a coin, claiming that this is the last valid state of a coin. Due to bonds the challenger will only do this when he actually knows that there was an invalid spend. If the challenger is a rational player, there should be no case where respondChallengeBefore should succeed. 
         await plasma.challengeBefore(
-                utxo_slot, challengeTx, proof, 
-                {'from': challenger, 'value': web3.toWei(0.1, 'ether')}
+                utxo_slot,
+                prev_tx , tx, // rlp encoded
+                '0x0', proof, // proofs from the tree
+                sigs, // concatenated signatures
+                3, 1000, 
+                 {'from': challenger, 'value': web3.toWei(0.1, 'ether')}
         );
+        
+
+        let responseTx = to_charlie[0];
+        let responseProof = tree_charlie.createMerkleProof(utxo_slot);
 
         await plasma.respondChallengeBefore(
-                utxo_slot, challengeTx, proof, 
-                {'from': charlie }
+                utxo_slot, 2000, responseTx, responseProof,
+                {'from': elliot }
         );
 
 
@@ -438,20 +467,21 @@ contract("Plasma ERC721", async function(accounts) {
         await plasma.finalizeExits({from: random_guy2 });
         let c = web3.eth.getBalance(charlie)
 
-        await plasma.withdraw(utxo_slot, {from : charlie });
+        await plasma.withdraw(utxo_slot, {from : elliot });
 
         assert.equal((await cards.balanceOf.call(alice)).toNumber(), 2);
         assert.equal((await cards.balanceOf.call(bob)).toNumber(), 0);
-        assert.equal((await cards.balanceOf.call(charlie)).toNumber(), 1);
+        assert.equal((await cards.balanceOf.call(charlie)).toNumber(), 0);
+        assert.equal((await cards.balanceOf.call(dylan)).toNumber(), 0);
+        assert.equal((await cards.balanceOf.call(elliot)).toNumber(), 1);
         assert.equal((await cards.balanceOf.call(plasma.address)).toNumber(), 2);
 
-        // On the contrary, his bond must be slashed, and `challenger` must be able to claim it
-        await plasma.withdrawBonds({from: charlie });
+        await plasma.withdrawBonds({from: elliot });
         
-        let withdrawedBonds = plasma.WithdrawedBonds({}, {fromBlock: 0, toBlock: 'latest'});
+        let withdrawedBonds = plasma.WithdrawedBonds({}, {fromBlock: 0, toBlock: 'latest'})
         let e = await Promisify(cb => withdrawedBonds.get(cb));
         let withdraw = e[0].args;
-        assert.equal(withdraw.from, charlie);
+        assert.equal(withdraw.from, elliot);
         assert.equal(withdraw.amount, web3.toWei(0.2, 'ether'));
     });
 
@@ -616,8 +646,87 @@ contract("Plasma ERC721", async function(accounts) {
 
         return [to_bob, tree_bob, to_charlie, tree_charlie];
     }
+
+  async function elliotInvalidHistoryExit() {
+        let utxo_slot = 2;
+        let to_bob = createUTXO(utxo_slot, 3, alice, bob);
+        let tree_bob = await submitUTXO(utxo_slot, to_bob[0]);
+
+        // The authority submits a block, but there is no transaction from Bob to Charlie
+        let tree_charlie = await submitUTXO();
+
+        // Nevertheless, Charlie pretends he received the coin, and by colluding with the chain operator he is able to include his invalid transaction in a block.
+        let to_dylan = createUTXO(utxo_slot, 2000, charlie, dylan);
+        let tree_dylan = await submitUTXO(utxo_slot, to_dylan[0]);
+
+        // Dylan having received the coin, gives it to Elliot. 
+        let to_elliot = createUTXO(utxo_slot, 3000, dylan, elliot);
+        let tree_elliot = await submitUTXO(utxo_slot, to_elliot[0]);
+        
+        // Elliot normally should be always checking the coin's history and not accepting the payment if it's invalid like in this case, but it is considered that they are all colluding together to steal Bob's coin.;
+        // Elliot actually has all the info required to submit an exit, even if one of the transactions in the coin's history were invalid. 
+        let sigs = to_dylan[1] + to_elliot[1].substr(2, 132);
+
+        let prev_tx_proof = tree_dylan.createMerkleProof(utxo_slot)
+        let exiting_tx_proof = tree_elliot.createMerkleProof(utxo_slot)
+
+        let prev_tx = to_dylan[0];
+        let exiting_tx = to_elliot[0]; 
+
+        plasma.startExit(
+                utxo_slot,
+                prev_tx, exiting_tx, // rlp encoded
+                prev_tx_proof, exiting_tx_proof, // proofs from the tree
+                sigs, // concatenated signatures
+                3000, 4000, // 1000 is when alice->bob got included, 2000 for bob->charlie
+                 {'from': elliot, 'value': web3.toWei(0.1, 'ether')}
+        );
+
+        return [to_bob, tree_bob];
     
-    function createUTXO(slot, prevBlock, from, to) {
+    }
+
+    async function elliotValidHistoryExit() {
+        let utxo_slot = 2;
+        let to_bob = createUTXO(utxo_slot, 3, alice, bob);
+        let tree_bob = await submitUTXO(utxo_slot, to_bob[0]);
+
+        // The authority submits a block, but there is no transaction from Bob to Charlie
+        let to_charlie = createUTXO(utxo_slot, 1000, bob, charlie);
+        let tree_charlie = await submitUTXO(utxo_slot, to_charlie[0]);
+
+        // Nevertheless, Charlie pretends he received the coin, and by colluding with the chain operator he is able to include his invalid transaction in a block.
+        let to_dylan = createUTXO(utxo_slot, 2000, charlie, dylan);
+        let tree_dylan = await submitUTXO(utxo_slot, to_dylan[0]);
+
+        // Dylan having received the coin, gives it to Elliot. 
+        let to_elliot = createUTXO(utxo_slot, 3000, dylan, elliot);
+        let tree_elliot = await submitUTXO(utxo_slot, to_elliot[0]);
+        
+        // Elliot normally should be always checking the coin's history and not accepting the payment if it's invalid like in this case, but it is considered that they are all colluding together to steal Bob's coin.;
+        // Elliot actually has all the info required to submit an exit, even if one of the transactions in the coin's history were invalid. 
+        let sigs = to_dylan[1] + to_elliot[1].substr(2, 132);
+
+        let prev_tx_proof = tree_dylan.createMerkleProof(utxo_slot)
+        let exiting_tx_proof = tree_elliot.createMerkleProof(utxo_slot)
+
+        let prev_tx = to_dylan[0];
+        let exiting_tx = to_elliot[0]; 
+
+        plasma.startExit(
+                utxo_slot,
+                prev_tx, exiting_tx, // rlp encoded
+                prev_tx_proof, exiting_tx_proof, // proofs from the tree
+                sigs, // concatenated signatures
+                3000, 4000, // 1000 is when alice->bob got included, 2000 for bob->charlie
+                 {'from': elliot, 'value': web3.toWei(0.1, 'ether')}
+        );
+
+        return [to_bob, tree_bob, to_charlie, tree_charlie];
+    
+    }
+
+  function createUTXO(slot, prevBlock, from, to) {
         let data = [ slot, prevBlock, 1, to ];
         data = '0x' + RLP.encode(data).toString('hex');
         let txHash = utils.soliditySha3(data);
@@ -628,10 +737,15 @@ contract("Plasma ERC721", async function(accounts) {
     async function submitUTXO(slot, tx) {
         // Create merkle Tree from A SINGLE UTXO and submit it.
         // Returns merkle tree that was created
-        let leaves = {}
-        leaves[slot] = utils.soliditySha3(tx);
+        let tree;
+        if (tx) {
+            let leaves = {}
+            leaves[slot] = utils.soliditySha3(tx);
+            tree = new SparseMerkleTree(64, leaves);
+        } else {
+            tree = new SparseMerkleTree(64);
+        }
 
-        let tree = new SparseMerkleTree(64, leaves);
         await plasma.submitBlock(tree.root, {'from': authority});
 
         return tree;
