@@ -3,6 +3,18 @@ const utils = require('web3-utils');
 const SparseMerkleTree = require('./SparseMerkleTree.js');
 const ethutil = require('ethereumjs-util');
 
+const Promisify = (inner) =>
+new Promise((resolve, reject) =>
+        inner((err, res) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(res);
+            }
+        })
+);
+
+
 /********** UTILS ********/
 
 function signHash(from, hash) {
@@ -25,7 +37,7 @@ function createUTXO(slot, prevBlock, from, to) {
     leaf.slot = slot
     leaf.hash = txHash;
     
-    return [data, sig, leaf];
+    return {'tx' : data, 'sig' : sig, 'leaf' : leaf};
 };
 
 async function submitTransactions(from, plasma, txs) {
@@ -45,8 +57,19 @@ async function submitTransactions(from, plasma, txs) {
     return tree;
 }
 
+async function withdrawBonds(plasma, withdrawer, amount) {
+    await plasma.withdrawBonds({from: withdrawer });
+    let withdrewBonds = plasma.WithdrewBonds({}, {fromBlock: 0, toBlock: 'latest'});
+    let e = await Promisify(cb => withdrewBonds.get(cb));
+    let withdraw = e[0].args;
+    assert.equal(withdraw.from, withdrawer);
+    assert.equal(withdraw.amount, web3.toWei(amount, 'ether'));
+}
+        
+
 module.exports = {
     signHash : signHash,
     createUTXO : createUTXO,
-    submitTransactions: submitTransactions
+    submitTransactions: submitTransactions,
+    withdrawBonds: withdrawBonds
 }
