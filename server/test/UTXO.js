@@ -3,6 +3,18 @@ const utils = require('web3-utils');
 const SparseMerkleTree = require('./SparseMerkleTree.js');
 const ethutil = require('ethereumjs-util');
 
+const Promisify = (inner) =>
+new Promise((resolve, reject) =>
+        inner((err, res) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(res);
+            }
+        })
+);
+
+
 /********** UTILS ********/
 
 function signHash(from, hash) {
@@ -15,17 +27,21 @@ function signHash(from, hash) {
     return signature;
 };
 
-function createUTXO(slot, prevBlock, from, to) {
-    let data = [ slot, prevBlock, 1, to ];
+function createUTXO(slot, block, incBlock, from, to) {
+    let data = [ slot, block, 1, to ];
     data = '0x' + RLP.encode(data).toString('hex');
-    let txHash = utils.soliditySha3(data);
+
+    // If it's a deposit transaction txHash = hash of the slot
+    let txHash = incBlock % 1000 !== 0 ?
+        utils.soliditySha3({type: 'uint64', value: slot}) :
+        utils.soliditySha3({type: 'bytes', value: data});
     let sig = signHash(from, txHash);
     
     let leaf = {};
     leaf.slot = slot
     leaf.hash = txHash;
     
-    return [data, sig, leaf];
+    return {'tx' : data, 'sig' : sig, 'leaf' : leaf};
 };
 
 async function submitTransactions(from, plasma, txs) {
@@ -45,8 +61,19 @@ async function submitTransactions(from, plasma, txs) {
     return tree;
 }
 
+async function withdrawBonds(plasma, withdrawer, amount) {
+    await plasma.withdrawBonds({from: withdrawer });
+    let withdrewBonds = plasma.WithdrewBonds({}, {fromBlock: 0, toBlock: 'latest'});
+    let e = await Promisify(cb => withdrewBonds.get(cb));
+    let withdraw = e[0].args;
+    assert.equal(withdraw.from, withdrawer);
+    assert.equal(withdraw.amount, web3.toWei(amount, 'ether'));
+}
+        
+
 module.exports = {
     signHash : signHash,
     createUTXO : createUTXO,
-    submitTransactions: submitTransactions
+    submitTransactions: submitTransactions,
+    withdrawBonds: withdrawBonds
 }
