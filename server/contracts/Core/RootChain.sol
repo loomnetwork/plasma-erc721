@@ -16,7 +16,7 @@ import '../Libraries/ECVerify.sol';
 import './SparseMerkleTree.sol';
 
 contract RootChainEvents{
-    event Deposit(uint64 indexed slot, uint256 depositBlockNumber, uint64 denomination, address indexed from);
+    event Deposit(uint64 indexed slot, uint256 depositBlockNumber, uint64 denomination, address indexed from, bytes32 hash);
     event SubmittedBlock(uint blockNumber, bytes32 root, uint timestamp);
 
     event StartedExit(uint64 indexed slot, address indexed owner, uint created_at);
@@ -152,15 +152,9 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
 
 
     /// @dev Allows anyone to deposit funds into the Plasma chain, called when contract receives ERC721
-    function deposit(address from, uint64 uid, uint32 denomination, bytes txBytes)
+    function deposit(address from, uint64 uid, uint32 denomination)
         private
     {
-        Transaction.TX memory txData = txBytes.getTx();
-        // Verify that the transaction data sent matches the coin data from ERC721
-        require(txData.slot == NUM_COINS);
-        require(txData.denomination == denomination);
-        require(txData.owner == from);
-        require(txData.prevBlock == 0);
 
         // Update state. Leave `exit` empty
         Coin memory coin;
@@ -170,7 +164,7 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
         coin.state = State.DEPOSITED;
         coins[NUM_COINS] = coin;
 
-        bytes32 txHash = keccak256(txBytes);
+        bytes32 txHash = keccak256(abi.encodePacked(NUM_COINS)); // hash for deposit transactions is the hash of its slot
         uint256 depositBlockNumber = getDepositBlock();
 
         childChain[depositBlockNumber] = childBlock({
@@ -179,7 +173,7 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
         });
 
         currentDepositBlock = currentDepositBlock.add(1);
-        emit Deposit(NUM_COINS, depositBlockNumber, denomination, from); // create a utxo at slot `NUM_COINS`
+        emit Deposit(NUM_COINS, depositBlockNumber, denomination, from, txHash); // create a utxo at slot `NUM_COINS`
 
         NUM_COINS += 1;
     }
@@ -190,7 +184,7 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
         uint64 slot,
         bytes prevTxBytes, bytes exitingTxBytes,
         bytes prevTxInclusionProof, bytes exitingTxInclusionProof,
-        bytes sigs,
+        bytes sig,
         uint prevTxIncBlock, uint exitingTxIncBlock)
         isState(slot, State.DEPOSITED)
         payable isBonded
@@ -198,37 +192,18 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
     {
         // If we're exiting a deposit UTXO, we do a different inclusion check
         if (exitingTxIncBlock % childBlockInterval != 0 ) {
-            checkDepositBlockInclusion(exitingTxBytes, sigs, exitingTxIncBlock, true);
+            checkDepositBlockInclusion(exitingTxBytes, sig, exitingTxIncBlock, true);
         } else {
             checkBlockInclusion(
                 prevTxBytes, exitingTxBytes,
                 prevTxInclusionProof, exitingTxInclusionProof,
-                sigs,
+                sig,
                 prevTxIncBlock, exitingTxIncBlock,
                 true
             );
         }
 
         pushExit(slot, prevTxIncBlock, exitingTxIncBlock);
-    }
-
-    function pushExit(uint64 slot, uint256 prevBlock, uint256 exitingBlock) private {
-        // Push exit to list
-        exitSlots.push(slot);
-
-        // Create exit
-        Coin storage c = coins[slot];
-        c.exit = Exit({
-            owner: msg.sender,
-            created_at: block.timestamp,
-            bond: msg.value,
-            prevBlock: prevBlock,
-            exitBlock: exitingBlock
-        });
-
-        // Update coin state
-        c.state = State.EXITING;
-        emit StartedExit(slot, msg.sender, block.timestamp);
     }
 
     function finalizeExit(uint64 slot) public {
@@ -287,7 +262,7 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
         uint64 slot,
         bytes prevTxBytes, bytes exitingTxBytes, 
         bytes prevTxInclusionProof, bytes exitingTxInclusionProof, 
-        bytes sigs,
+        bytes sig,
         uint prevTxIncBlock, uint exitingTxIncBlock) 
         external
         payable isBonded
@@ -295,11 +270,11 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
     {
         // If we're exiting a deposit UTXO directly, we do a different inclusion check
         if (exitingTxIncBlock % childBlockInterval != 0 ) { 
-            checkDepositBlockInclusion(exitingTxBytes, sigs, exitingTxIncBlock, false);
+            checkDepositBlockInclusion(exitingTxBytes, sig, exitingTxIncBlock, false);
         } else {
             checkBlockInclusion(
                 prevTxBytes, exitingTxBytes,prevTxInclusionProof, 
-                exitingTxInclusionProof, sigs, 
+                exitingTxInclusionProof, sig, 
                 prevTxIncBlock, exitingTxIncBlock, false);
         }
         setChallenged(slot);
@@ -371,18 +346,37 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
         emit WithdrewBonds(msg.sender, amount);
     }
 
+    function slashBond(address from, address to) private {
+        balances[from].bonded = balances[from].bonded.sub(BOND_AMOUNT);
+        balances[to].withdrawable = balances[to].withdrawable.add(BOND_AMOUNT);
+        emit SlashedBond(from, to, BOND_AMOUNT);
+    }
+
+    function pushExit(uint64 slot, uint256 prevBlock, uint256 exitingBlock) private {
+        // Push exit to list
+        exitSlots.push(slot);
+
+        // Create exit
+        Coin storage c = coins[slot];
+        c.exit = Exit({
+            owner: msg.sender,
+            created_at: block.timestamp,
+            bond: msg.value,
+            prevBlock: prevBlock,
+            exitBlock: exitingBlock
+        });
+
+        // Update coin state
+        c.state = State.EXITING;
+        emit StartedExit(slot, msg.sender, block.timestamp);
+    }
+
     function setChallenged(uint64 slot) private {
         // Do not delete exit yet. Set its state as challenged and wait for the exitor's response
         coins[slot].state = State.CHALLENGED;
         // Save the challenger's address, for applying penalties
         challengers[slot] = msg.sender;
         emit ChallengedExit(slot);
-    }
-
-    function slashBond(address from, address to) private {
-        balances[from].bonded = balances[from].bonded.sub(BOND_AMOUNT);
-        balances[to].withdrawable = balances[to].withdrawable.add(BOND_AMOUNT);
-        emit SlashedBond(from, to, BOND_AMOUNT);
     }
 
 
@@ -401,7 +395,7 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
         Transaction.TX memory txData = txBytes.getTx();
         if (checkSender) require(txData.owner == msg.sender, "Invalid sender");
 
-        bytes32 txHash = keccak256(txBytes); 
+        bytes32 txHash = keccak256(abi.encodePacked(txData.slot));
         require(txHash.ecverify(signature, txData.owner), "Invalid sig");
         require(
             txHash == childChain[txIncBlock].root,
@@ -414,7 +408,7 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
     function checkBlockInclusion(
             bytes prevTxBytes, bytes exitingTxBytes,
             bytes prevTxInclusionProof, bytes exitingTxInclusionProof,
-            bytes sigs,
+            bytes sig,
             uint prevTxIncBlock, uint exitingTxIncBlock, bool checkSender)
             private
             view
@@ -424,23 +418,25 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
         if (checkSender) require(exitingTxData.owner == msg.sender, "Invalid sender");
 
         Transaction.TX memory prevTxData = prevTxBytes.getTx();
-        require(keccak256(exitingTxBytes).ecverify(getSig(sigs, 1), prevTxData.owner), "Invalid sig");
+        require(keccak256(exitingTxBytes).ecverify(sig, prevTxData.owner), "Invalid sig");
 
-        checkTxIncluded(exitingTxBytes, exitingTxIncBlock, exitingTxInclusionProof);
         checkTxIncluded(prevTxBytes, prevTxIncBlock, prevTxInclusionProof);
+        checkTxIncluded(exitingTxBytes, exitingTxIncBlock, exitingTxInclusionProof);
 
         return true;
     }
 
     function checkTxIncluded(bytes txBytes, uint blockNumber, bytes proof) private view {
         Transaction.TX memory txData = txBytes.getTx();
-        bytes32 txHash = keccak256(txBytes);
+        bytes32 txHash;
         bytes32 root = childChain[blockNumber].root;
 
         // If deposit block, just check the matching hash to the block's root. Simpler verification due to deposit mechanism
         if (blockNumber % childBlockInterval != 0) {
+            txHash = keccak256(abi.encodePacked(txData.slot));
             require(txHash == root);
         } else {
+            txHash = keccak256(txBytes);
             require(
                 checkMembership(
                     txHash,
@@ -456,12 +452,12 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
 
     /******************** ERC721 ********************/
 
-    function onERC721Received(address _from, uint256 _uid, bytes _data)
+    function onERC721Received(address _from, uint256 _uid, bytes)
         public
         returns(bytes4)
     {
         require(msg.sender == address(cryptoCards)); // can only be called by the associated cryptocards contract.
-        deposit(_from, uint64(_uid), uint32(1), _data);
+        deposit(_from, uint64(_uid), uint32(1));
         return ERC721_RECEIVED;
     }
 
@@ -481,10 +477,5 @@ contract RootChain is ERC721Receiver, SparseMerkleTree, RootChainEvents {
     function getDepositBlock() private view returns (uint256) {
         return currentChildBlock.sub(childBlockInterval).add(currentDepositBlock);
     }
-
-    function getSig(bytes sigs, uint i) private pure returns(bytes) {
-        return ByteUtils.slice(sigs, 66 * i,  66);
-    }
-
 }
 

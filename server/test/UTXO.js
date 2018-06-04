@@ -27,10 +27,14 @@ function signHash(from, hash) {
     return signature;
 };
 
-function createUTXO(slot, prevBlock, from, to) {
-    let data = [ slot, prevBlock, 1, to ];
+function createUTXO(slot, block, incBlock, from, to) {
+    let data = [ slot, block, 1, to ];
     data = '0x' + RLP.encode(data).toString('hex');
-    let txHash = utils.soliditySha3(data);
+
+    // If it's a deposit transaction txHash = hash of the slot
+    let txHash = incBlock % 1000 !== 0 ?
+        utils.soliditySha3({type: 'uint64', value: slot}) :
+        utils.soliditySha3({type: 'bytes', value: data});
     let sig = signHash(from, txHash);
     
     let leaf = {};
