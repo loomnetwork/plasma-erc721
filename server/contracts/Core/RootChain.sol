@@ -179,49 +179,67 @@ contract RootChain is ERC721Receiver {
     /******************** EXIT RELATED ********************/
 
     function startExit(
-        uint64 slot, bytes prevTxBytes,
-        bytes exitingTxBytes, bytes prevTxInclusionProof,
-        bytes exitingTxInclusionProof, bytes sig,
-        uint256 prevTxIncBlock, uint256 exitingTxIncBlock)
+        uint64 slot,
+        bytes prevTxBytes, bytes exitingTxBytes,
+        bytes prevTxInclusionProof, bytes exitingTxInclusionProof,
+        bytes signature,
+        uint256[2] blocks)
         external
         payable isBonded
         isState(slot, State.DEPOSITED)
     {
-        // If we're exiting a deposit UTXO, we do a different inclusion check
-        if (exitingTxIncBlock % childBlockInterval != 0) {
-            checkDepositBlockInclusion(exitingTxBytes, sig, exitingTxIncBlock, true);
-        } else {
-            checkBlockInclusion(
-                prevTxBytes, exitingTxBytes,
-                prevTxInclusionProof, exitingTxInclusionProof,
-                sig,
-                prevTxIncBlock, exitingTxIncBlock,
-                true
-            );
-        }
-        pushExit(slot, prevTxBytes, prevTxIncBlock, exitingTxIncBlock);
+        doInclusionChecks(
+            prevTxBytes, exitingTxBytes,
+            prevTxInclusionProof, exitingTxInclusionProof,
+            signature,
+            blocks
+        );
+        pushExit(slot, prevTxBytes.getOwner(), blocks);
     }
 
+    function doInclusionChecks(
+        bytes prevTxBytes, bytes exitingTxBytes,
+        bytes prevTxInclusionProof, bytes exitingTxInclusionProof,
+        bytes signature,
+        uint256[2] blocks)
+        private
+        view
+    {
+        if (blocks[1] % childBlockInterval != 0) {
+            checkIncludedAndSigned(
+                exitingTxBytes,
+                exitingTxInclusionProof,
+                signature,
+                blocks[1]
+            );
+        } else {
+            checkBothIncludedAndSigned(
+                prevTxBytes, exitingTxBytes, prevTxInclusionProof,
+                exitingTxInclusionProof, signature,
+                blocks
+            );
+        }
+    }
+
+    // Needed to bypass stack limit errors
     function pushExit(
         uint64 slot,
-        bytes txBytes,
-        uint256 prevBlock,
-        uint256 exitingBlock) private
+        address prevOwner,
+        uint256[2] blocks)
+        private
     {
-        Transaction.TX memory txData = txBytes.getTx();
-
         // Push exit to list
         exitSlots.push(slot);
 
         // Create exit
         Coin storage c = coins[slot];
         c.exit = Exit({
-            prevOwner: txData.owner,
+            prevOwner: prevOwner,
             owner: msg.sender,
             createdAt: block.timestamp,
             bond: msg.value,
-            prevBlock: prevBlock,
-            exitBlock: exitingBlock
+            prevBlock: blocks[0],
+            exitBlock: blocks[1]
         });
 
         // Update coin state
@@ -280,29 +298,21 @@ contract RootChain is ERC721Receiver {
     // before prevTx or prevTx itself.
     function challengeBefore(
         uint64 slot,
-        bytes prevTxBytes, bytes exitingTxBytes,
-        bytes prevTxInclusionProof, bytes exitingTxInclusionProof,
-        bytes sig,
-        uint256 prevTxIncBlock, uint256 exitingTxIncBlock)
+        bytes prevTxBytes, bytes txBytes,
+        bytes prevTxInclusionProof, bytes txInclusionProof,
+        bytes signature,
+        uint256[2] blocks)
         external
         payable isBonded
         isState(slot, State.EXITING)
     {
-        require(prevTxIncBlock < exitingTxIncBlock);
-        // If we're exiting a deposit UTXO directly, we do a different inclusion check
-        if (exitingTxIncBlock % childBlockInterval != 0) {
-            checkDepositBlockInclusion(
-                exitingTxBytes,
-                sig,
-                exitingTxIncBlock,
-                false);
-        } else {
-            checkBlockInclusion(
-                prevTxBytes, exitingTxBytes, prevTxInclusionProof,
-                exitingTxInclusionProof, sig,
-                prevTxIncBlock, exitingTxIncBlock, false);
-        }
-        setChallenged(slot, exitingTxBytes);
+        doInclusionChecks(
+            prevTxBytes, txBytes,
+            prevTxInclusionProof, txInclusionProof,
+            signature,
+            blocks
+        );
+        setChallenged(slot, txBytes.getOwner());
     }
 
     // If `challengeBefore` was successfully challenged, then set state to
@@ -317,12 +327,10 @@ contract RootChain is ERC721Receiver {
         external
         isState(slot, State.CHALLENGED)
     {
-        bytes32 txHash = keccak256(challengingTransaction);
-        require(txHash.ecverify(signature, responses[slot]), "Invalid sig");
-        checkTxIncluded(challengingTransaction, challengingBlockNumber, proof);
-
         Transaction.TX memory txData = challengingTransaction.getTx();
+        require(txData.hash.ecverify(signature, responses[slot]), "Invalid signature");
         require(txData.slot == slot, "Tx is referencing another slot");
+        checkTxIncluded(txData.slot, txData.hash, challengingBlockNumber, proof);
 
         // If the exit was actually challenged and responded, penalize the challenger
         slashBond(challengers[slot], coins[slot].exit.owner);
@@ -341,28 +349,9 @@ contract RootChain is ERC721Receiver {
         bytes signature)
         external isState(slot, State.EXITING) cleanupExit(slot)
     {
-        // Must challenge with a tx in between
-        require(
-            coins[slot].exit.exitBlock > challengingBlockNumber && coins[slot].exit.prevBlock < challengingBlockNumber,
-            "Challenging transaction must have happened AFTER the attested exit's timestamp");
-
-        // Check that the challenging transaction has been signed
-        // by the attested previous owner of the coin in the exit
-        checkBetween(slot, challengingTransaction, signature);
-        checkTxIncluded(challengingTransaction, challengingBlockNumber, proof);
-        // Apply penalties and change state
-        slashBond(coins[slot].exit.owner, msg.sender);
-        coins[slot].state = State.DEPOSITED;
+        checkBetween(slot, challengingTransaction, challengingBlockNumber, signature, proof);
+        applyPenalties(slot);
     }
-
-    function checkBetween(uint64 slot, bytes txBytes, bytes signature) private view {
-        bytes32 txHash = keccak256(txBytes);
-        require(txHash.ecverify(signature, coins[slot].exit.prevOwner), "Invalid sig");
-
-        Transaction.TX memory txData = txBytes.getTx();
-        require(txData.slot == slot, "Tx is referencing another slot");
-    }
-
 
     function challengeAfter(
         uint64 slot,
@@ -374,11 +363,39 @@ contract RootChain is ERC721Receiver {
         isState(slot, State.EXITING)
         cleanupExit(slot)
     {
-        checkDirectSpend(slot, challengingTransaction, signature);
-        checkTxIncluded(challengingTransaction, challengingBlockNumber, proof);
-        // Apply penalties and delete the exit
+        checkAfter(slot, challengingTransaction, challengingBlockNumber, signature, proof);
+        applyPenalties(slot);
+    }
+
+
+    // Must challenge with a tx in between
+
+    // Check that the challenging transaction has been signed
+    // by the attested previous owner of the coin in the exit
+    function checkBetween(uint64 slot, bytes txBytes, uint blockNumber, bytes signature, bytes proof) private view {
+        require(
+            coins[slot].exit.exitBlock > blockNumber &&
+            coins[slot].exit.prevBlock < blockNumber,
+            "Tx should be between the exit's blocks"
+        );
+
+        Transaction.TX memory txData = txBytes.getTx();
+        require(txData.hash.ecverify(signature, coins[slot].exit.prevOwner), "Invalid signature");
+        require(txData.slot == slot, "Tx is referencing another slot");
+        checkTxIncluded(slot, txData.hash, blockNumber, proof);
+    }
+
+    function checkAfter(uint64 slot, bytes txBytes, uint blockNumber, bytes signature, bytes proof) private view {
+        Transaction.TX memory txData = txBytes.getTx();
+        require(txData.hash.ecverify(signature, coins[slot].exit.owner), "Invalid signature");
+        require(txData.slot == slot, "Tx is referencing another slot");
+        require(txData.prevBlock == coins[slot].exit.exitBlock, "Not a direct spend");
+        checkTxIncluded(slot, txData.hash, blockNumber, proof);
+    }
+
+    function applyPenalties(uint64 slot) private {
+        // Apply penalties and change state
         slashBond(coins[slot].exit.owner, msg.sender);
-        // Reset coin state
         coins[slot].state = State.DEPOSITED;
     }
 
@@ -405,7 +422,7 @@ contract RootChain is ERC721Receiver {
         emit SlashedBond(from, to, BOND_AMOUNT);
     }
 
-    function setChallenged(uint64 slot, bytes txBytes) private {
+    function setChallenged(uint64 slot, address owner) private {
         // When an exit is challenged, its state is set to challenged and the
         // contract waits for the exitor's response. The exit is not
         // immediately deleted.
@@ -415,91 +432,68 @@ contract RootChain is ERC721Receiver {
 
         // Need to save the exiting transaction's owner, to verify
         // that the response is valid
-        Transaction.TX memory txData = txBytes.getTx();
-        responses[slot] = txData.owner;
+        responses[slot] = owner;
         emit ChallengedExit(slot);
     }
 
     /******************** PROOF CHECKING ********************/
 
-    function checkDirectSpend(uint64 slot, bytes txBytes, bytes signature) private view {
-        Transaction.TX memory txData = txBytes.getTx();
-        bytes32 txHash = keccak256(txBytes);
-        require(txHash.ecverify(signature, coins[slot].exit.owner), "Invalid sig");
-        require(txData.slot == slot, "Tx is referencing another slot");
-        require(txData.prevBlock == coins[slot].exit.exitBlock, "Not a direct spend");
-    }
-
-    function checkDepositBlockInclusion(
-        bytes txBytes,
+    function checkIncludedAndSigned(
+        bytes exitingTxBytes,
+        bytes exitingTxInclusionProof,
         bytes signature,
-        uint256 txIncBlock,
-        bool checkSender
-    )
-         private
-         view
-         returns (bool)
-    {
-        Transaction.TX memory txData = txBytes.getTx();
-        if (checkSender)
-            require(txData.owner == msg.sender, "Invalid sender");
-
-        bytes32 txHash = keccak256(abi.encodePacked(txData.slot));
-        require(txHash.ecverify(signature, txData.owner), "Invalid sig");
-        require(
-            txHash == childChain[txIncBlock].root,
-            "Deposit Tx not included in block"
-        );
-
-        return true;
-    }
-
-    function checkBlockInclusion(
-        bytes prevTxBytes, bytes exitingTxBytes,
-        bytes prevTxInclusionProof, bytes exitingTxInclusionProof,
-        bytes sig,
-        uint256 prevTxIncBlock, uint256 exitingTxIncBlock, bool checkSender)
+        uint256 blk)
         private
         view
-        returns (bool)
     {
+        Transaction.TX memory txData = exitingTxBytes.getTx();
+
+        // Deposit transactions need to be signed by their owners
+        // e.g. Alice signs a transaction to Alice
+        require(txData.hash.ecverify(signature, txData.owner), "Invalid signature");
+        checkTxIncluded(txData.slot, txData.hash, blk, exitingTxInclusionProof);
+    }
+
+    function checkBothIncludedAndSigned(
+        bytes prevTxBytes, bytes exitingTxBytes,
+        bytes prevTxInclusionProof, bytes exitingTxInclusionProof,
+        bytes signature,
+        uint256[2] blocks)
+        private
+        view
+    {
+        require(blocks[0] < blocks[1]);
+
         Transaction.TX memory exitingTxData = exitingTxBytes.getTx();
         Transaction.TX memory prevTxData = prevTxBytes.getTx();
 
-        if (checkSender)
-            require(exitingTxData.owner == msg.sender, "Invalid sender");
-
-        require(keccak256(exitingTxBytes).ecverify(sig, prevTxData.owner), "Invalid sig");
+        // Both transactions need to be referring to the same slot
         require(exitingTxData.slot == prevTxData.slot);
-        require(prevTxIncBlock < exitingTxIncBlock);
 
-        checkTxIncluded(prevTxBytes, prevTxIncBlock, prevTxInclusionProof);
-        checkTxIncluded(exitingTxBytes, exitingTxIncBlock, exitingTxInclusionProof);
+        // The exiting transaction must be signed by the previous transaciton's owner
+        require(exitingTxData.hash.ecverify(signature, prevTxData.owner), "Invalid signature");
 
-        return true;
+        // Both transactions must be included in their respective blocks
+        checkTxIncluded(prevTxData.slot, prevTxData.hash, blocks[0], prevTxInclusionProof);
+        checkTxIncluded(exitingTxData.slot, exitingTxData.hash, blocks[1], exitingTxInclusionProof);
     }
 
-    function checkTxIncluded(bytes txBytes, uint256 blockNumber, bytes proof) private view {
-        Transaction.TX memory txData = txBytes.getTx();
-        bytes32 txHash;
+    function checkTxIncluded(uint64 slot, bytes32 txHash, uint256 blockNumber, bytes proof) private view {
         bytes32 root = childChain[blockNumber].root;
 
-        // If deposit block, just verify that the tx hash equals the block
-        // root.  This simpler verification due to deposit block's root being
-        // set equal to the hash of the signle transaction it contains.
         if (blockNumber % childBlockInterval != 0) {
-            txHash = keccak256(abi.encodePacked(txData.slot));
+            // Check against block root for deposit block numbers
             require(txHash == root);
         } else {
-            txHash = keccak256(txBytes);
+            // Check against merkle tree for all other block numbers
             require(
                 checkMembership(
                     txHash,
                     root,
-                    txData.slot,
+                    slot,
                     proof
-                ),
-                "Tx not included in claimed block"
+            ),
+            "Tx not included in claimed block"
             );
         }
     }
