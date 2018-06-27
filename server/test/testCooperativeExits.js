@@ -76,7 +76,7 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
                     '0x', utxo,
                     '0x0', '0x0',
                      sig,
-                     prevBlock, UTXO.block,
+                     [prevBlock, UTXO.block],
                      {'from': alice, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -118,7 +118,7 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
                     prev_tx , exiting_tx,
                     '0x0', exiting_tx_proof,
                     sig,
-                    prevBlock, submittedBlock, // Prev tx was included in block 3, exiting tx was included in block 1000
+                    [prevBlock, submittedBlock], // Prev tx was included in block 3, exiting tx was included in block 1000
                      {'from': bob, 'value': web3.toWei(0.1, 'ether')}
             );
             t0 = (await web3.eth.getBlock('latest')).timestamp;
@@ -180,7 +180,7 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
                     prev_tx, exiting_tx,
                     prev_tx_proof, exiting_tx_proof,
                     sig,
-                    prevBlock, exitBlock,
+                    [prevBlock, exitBlock],
                      {'from': charlie, 'value': web3.toWei(0.1, 'ether')}
             );
             t0 = (await web3.eth.getBlock('latest')).timestamp;
@@ -224,11 +224,12 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
             let alice_to_bob = {};
             let txs = [];
             let tx;
-            UTXO.forEach(function(aUTXO) {
-                tx = txlib.createUTXO(aUTXO.slot, UTXO.block, alice, bob);
+            for (let i in UTXO) {
+                let aUTXO = UTXO[i];
+                tx = txlib.createUTXO(aUTXO.slot, aUTXO.block, alice, bob);
                 alice_to_bob[aUTXO.slot] = tx;
                 txs.push(tx.leaf);
-            });
+            }
 
             // Tree contains both transactions
             let tree_bob = await txlib.submitTransactions(authority, plasma, txs);
@@ -236,27 +237,29 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
             // Block 1000 has now been checkpointed with both transactions that give ownership of the coins to Bob
             // UTXO 1 was deposited at Block 2, UTXO 2 was created at block 3
 
-            let prev_tx, exiting_tx, exiting_tx_proof, sig;
+            let prev_tx, exiting_tx, prev_tx_proof, exiting_tx_proof, sig;
             let slot;
 
-            UTXO.forEach(function(aUTXO) {
+            for (let i in UTXO) {
+                let aUTXO = UTXO[i];
                 slot = aUTXO.slot;
-                sig = alice_to_bob[slot].sig;
-                exiting_tx_proof = tree_bob.createMerkleProof(slot);
+
                 prev_tx = txlib.createUTXO(slot, 0, alice, alice).tx;
                 exiting_tx = alice_to_bob[slot].tx;
+                sig = alice_to_bob[slot].sig;
 
-                plasma.startExit(
+                prev_tx_proof = '0x0';
+                exiting_tx_proof = tree_bob.createMerkleProof(slot);
+
+                await plasma.startExit(
                         slot,
-                        prev_tx , exiting_tx,
-                        '0x0', exiting_tx_proof,
+                        prev_tx, exiting_tx,
+                        prev_tx_proof, exiting_tx_proof,
                         sig,
-                        aUTXO.block, exitBlock,
+                        [aUTXO.block, exitBlock],
                          {'from': bob, 'value': web3.toWei(0.1, 'ether')}
                 );
-            });
-
-            // Bob exit of UTXO 2
+            }
             t0 = (await web3.eth.getBlock('latest')).timestamp;
 
             // Even though the coin still belongs to Alice, it is in the `EXITING` state so it shouldn't be possible for her to exit it
@@ -324,7 +327,7 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
                     prev_tx , exiting_tx,
                     '0x0', exiting_tx_proof,
                     sig,
-                    UTXO[1].block, 1000,
+                    [UTXO[1].block, 1000],
                      {'from': bob, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -340,7 +343,7 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
                     prev_tx , exiting_tx,
                     prev_tx_proof, exiting_tx_proof,
                     sig,
-                    1000, 2000,
+                    [1000, 2000],
                      {'from': charlie, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -409,7 +412,7 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
                         prev_tx , exiting_tx,
                         prev_tx_proof, exiting_tx_proof,
                         sig,
-                        1000, 2000,
+                        [1000, 2000],
                          {'from': charlie, 'value': web3.toWei(0.1, 'ether')}
                 );
             });
@@ -457,7 +460,7 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
                     prev_tx , exiting_tx,
                     '0x0', exiting_tx_proof,
                     sig,
-                    UTXO[0].block, 1000,
+                    [UTXO[0].block, 1000],
                      {'from': bob, 'value': web3.toWei(0.1, 'ether')}
             );
             t0 = (await web3.eth.getBlock('latest')).timestamp;
@@ -473,7 +476,7 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
                     prev_tx , exiting_tx,
                     '0x0', exiting_tx_proof,
                     sig,
-                    UTXO[1].block, 1000,
+                    [UTXO[1].block, 1000],
                      {'from': charlie, 'value': web3.toWei(0.1, 'ether')}
             );
             t0 = (await web3.eth.getBlock('latest')).timestamp;
@@ -529,7 +532,7 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
                     prev_tx , exiting_tx,
                     '0x0', exiting_tx_proof,
                     sig,
-                    UTXO[1].block, 1000,
+                    [UTXO[1].block, 1000],
                      {'from': charlie, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -546,7 +549,7 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
                     prev_tx, exiting_tx,
                     prev_tx_proof, exiting_tx_proof,
                     sig,
-                    1000, 2000,
+                    [1000, 2000],
                      {'from': charlie, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -569,5 +572,6 @@ contract("Plasma ERC721 - Cooperative Exits, no challenges", async function(acco
             assert.equal(withdraw.from, charlie);
             assert.equal(withdraw.amount, web3.toWei(0.1 * 2, 'ether'));
         });
+
     });
 });
