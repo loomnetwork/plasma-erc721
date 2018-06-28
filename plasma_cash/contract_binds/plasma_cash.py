@@ -26,8 +26,7 @@ class PlasmaCash(Contract):
             prev_tx_inclusion_proof,
             exiting_tx_inclusion_proof,
             sig,
-            prev_tx_block_num,
-            exiting_tx_block_num,
+            [prev_tx_block_num, exiting_tx_block_num],
         ]
 
         return self.sign_and_send(
@@ -107,8 +106,7 @@ class PlasmaCash(Contract):
             prev_tx_proof,
             exiting_tx_proof,
             sigs,
-            prev_tx_blk_num,
-            tx_blk_num,
+            [prev_tx_blk_num, tx_blk_num],
         ]
         return self.sign_and_send(
             self.contract.functions.startExit, args, value=self.BOND
