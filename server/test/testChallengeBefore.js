@@ -82,7 +82,7 @@ contract("Plasma ERC721 - Invalid History Challenge / `challengeBefore`", async 
                 prev_tx , tx, // rlp encoded
                 '0x0', tx_proof, // proofs from the tree
                 sig, // concatenated signatures
-                UTXO.block, 1000,
+                [UTXO.block, 1000],
                 {'from': challenger, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -132,7 +132,7 @@ contract("Plasma ERC721 - Invalid History Challenge / `challengeBefore`", async 
                 prev_tx , tx, // rlp encoded
                 '0x0', proof, // proofs from the tree
                 sig, // concatenated signatures
-                3, 1000,
+                [3, 1000],
                 {'from': challenger, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -199,7 +199,7 @@ contract("Plasma ERC721 - Invalid History Challenge / `challengeBefore`", async 
                 prev_tx, exiting_tx,
                 prev_tx_proof, exiting_tx_proof,
                 sig,
-                3000, 4000,
+                [3000, 4000],
                 {'from': elliot, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -216,7 +216,7 @@ contract("Plasma ERC721 - Invalid History Challenge / `challengeBefore`", async 
                 prev_tx , tx, // rlp encoded
                 '0x0', tx_proof, // proofs from the tree
                 sig, // concatenated signatures
-                UTXO.block, 1000,
+                [UTXO.block, 1000],
                 {'from': challenger, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -292,7 +292,7 @@ contract("Plasma ERC721 - Invalid History Challenge / `challengeBefore`", async 
                 prev_tx, exiting_tx,
                 prev_tx_proof, exiting_tx_proof,
                 sig,
-                3000, 4000,
+                [3000, 4000],
                 {'from': elliot, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -341,7 +341,7 @@ contract("Plasma ERC721 - Invalid History Challenge / `challengeBefore`", async 
                 prev_tx, exiting_tx,
                 prev_tx_proof, exiting_tx_proof,
                 sig,
-                3000, 4000,
+                [3000, 4000],
                 {'from': elliot, 'value': web3.toWei(0.1, 'ether')}
             );
 

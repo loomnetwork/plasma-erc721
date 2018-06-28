@@ -97,7 +97,7 @@ contract("Plasma ERC721 - Exit Spent Coin Challenge / `challengeAfter`", async f
                     prev_tx, exiting_tx,
                     prev_tx_proof, proof,
                     sig,
-                    2000, 3000,
+                    [2000, 3000],
                      {'from': dylan, 'value': web3.toWei(0.1, 'ether')}
             );
             t0 = (await web3.eth.getBlock('latest')).timestamp;
@@ -172,7 +172,7 @@ contract("Plasma ERC721 - Exit Spent Coin Challenge / `challengeAfter`", async f
                 prev_tx, utxo,
                 '0x0', proof,
                 sig,
-                3, 1000,
+                [3, 1000],
                 {'from': bob, 'value': web3.toWei(0.1, 'ether')}
             );
             t0 = (await web3.eth.getBlock('latest')).timestamp;
@@ -230,7 +230,7 @@ contract("Plasma ERC721 - Exit Spent Coin Challenge / `challengeAfter`", async f
                     prev_tx, exiting_tx,
                     prev_tx_proof, exiting_tx_proof,
                     sig,
-                    1000, 2000,
+                    [1000, 2000],
                      {'from': charlie, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -261,7 +261,7 @@ contract("Plasma ERC721 - Exit Spent Coin Challenge / `challengeAfter`", async f
                     '0x', utxo,
                     '0x0', '0x0',
                      sig,
-                     0, UTXO[0].block,
+                     [0, UTXO[0].block],
                      {'from': alice, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -306,7 +306,7 @@ contract("Plasma ERC721 - Exit Spent Coin Challenge / `challengeAfter`", async f
                      prev_tx, exiting_tx,
                      '0x0', exiting_tx_proof,
                      sig,
-                     UTXO[0].block, 1000,
+                     [UTXO[0].block, 1000],
                      {'from': bob, 'value': web3.toWei(0.1, 'ether')}
             );
 
