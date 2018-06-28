@@ -32,9 +32,7 @@ trudy.watch_exits(deposit1_utxo)
 
 # Trudy sends her coin to Dan
 trudy_to_dan = trudy.send_transaction(
-    deposit1_utxo,
-    coin['deposit_block'],
-    dan.token_contract.account.address,
+    deposit1_utxo, coin['deposit_block'], dan.token_contract.account.address
 )
 authority.submit_block()
 trudy_to_dan_block = authority.get_block_number()

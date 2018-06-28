@@ -90,7 +90,7 @@ contract("Plasma ERC721 - Multiple Deposits in various blocks", async function(a
                 prev_tx, utxo,
                 '0x0', proof,
                 sig,
-                3, 1000,
+                [3, 1000],
                 {'from': bob, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -106,7 +106,7 @@ contract("Plasma ERC721 - Multiple Deposits in various blocks", async function(a
                 prev_tx, utxo,
                 '0x0', proof,
                 sig,
-                block, 2000,
+                [block, 2000],
                 {'from': alice, 'value': web3.toWei(0.1, 'ether')}
             );
 
