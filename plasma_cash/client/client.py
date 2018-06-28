@@ -319,7 +319,7 @@ class Client(object):
             'ChallengedExit',
             self._respond_to_challenge,
             0.1,
-            filters={'slot': slot}
+            filters={'slot': slot},
         )
 
     def _respond_to_challenge(self, event):
