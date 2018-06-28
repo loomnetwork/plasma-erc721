@@ -105,7 +105,7 @@ contract("Plasma ERC721 - Multiple Validators and ERC721 tokens", async function
                 prev_tx, exiting_tx,
                 prev_tx_proof, exiting_tx_proof,
                 sig,
-                1000, 2000,
+                [1000, 2000],
                 {'from': charlie, 'value': web3.toWei(0.1, 'ether')}
             );
 
@@ -120,7 +120,7 @@ contract("Plasma ERC721 - Multiple Validators and ERC721 tokens", async function
                 prev_tx, exiting_tx,
                 prev_tx_proof, exiting_tx_proof,
                 sig,
-                1000, 2000,
+                [1000, 2000],
                 {'from': charlie, 'value': web3.toWei(0.1, 'ether')}
             );
 
