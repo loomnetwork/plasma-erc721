@@ -9,7 +9,7 @@ import "./ERC20Receiver.sol";
 
 contract ExtendedERC20 is StandardToken {
 
-    bytes4 constant ERC20_RECEIVED = 0xbc04f0af;
+    bytes4 constant ERC20_RECEIVED = 0x65d83056;
     using AddressUtils for address;
 
     function safeTransferAndCall(address _to, uint256 _amount) public {

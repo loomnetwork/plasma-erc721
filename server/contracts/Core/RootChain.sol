@@ -717,12 +717,12 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
         deposit(msg.sender, 0, msg.value, Mode.ETH);
     }
 
-    function onERC20Received(address _from, uint256 amount, bytes)
+    function onERC20Received(address _from, uint256 _amount, bytes)
         public
         isTokenApproved(msg.sender)
         returns(bytes4)
     {
-        deposit(_from, 0, amount, Mode.ERC20);
+        deposit(_from, 0, _amount, Mode.ERC20);
         return ERC20_RECEIVED;
     }
 
