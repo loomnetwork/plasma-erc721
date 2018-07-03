@@ -455,7 +455,13 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
             revert("Invalid coin mode");
         }
 
-        emit Withdrew(msg.sender, c.mode, c.contractAddress, uid, denomination);
+        emit Withdrew(
+            msg.sender,
+            c.mode,
+            c.contractAddress,
+            uid,
+            denomination
+        );
 }
 
     /******************** CHALLENGES ********************/
@@ -581,7 +587,16 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
 
     // Check that the challenging transaction has been signed
     // by the attested previous owner of the coin in the exit
-    function checkBetween(uint64 slot, bytes txBytes, uint blockNumber, bytes signature, bytes proof) private view {
+    function checkBetween(
+        uint64 slot,
+        bytes txBytes,
+        uint blockNumber, 
+        bytes signature, 
+        bytes proof
+    ) 
+        private 
+        view 
+    {
         require(
             coins[slot].exit.exitBlock > blockNumber &&
             coins[slot].exit.prevBlock < blockNumber,
@@ -696,7 +711,15 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
         checkTxIncluded(exitingTxData.slot, exitingTxData.hash, blocks[1], exitingTxInclusionProof);
     }
 
-    function checkTxIncluded(uint64 slot, bytes32 txHash, uint256 blockNumber, bytes proof) private view {
+    function checkTxIncluded(
+        uint64 slot, 
+        bytes32 txHash, 
+        uint256 blockNumber,
+        bytes proof
+    ) 
+        private 
+        view 
+    {
         bytes32 root = childChain[blockNumber].root;
 
         if (blockNumber % childBlockInterval != 0) {
