@@ -12,19 +12,23 @@ contract ExtendedERC20 is StandardToken {
     bytes4 constant ERC20_RECEIVED = 0xbc04f0af;
     using AddressUtils for address;
 
-    function safeTransferAndCall(address _to, uint256 amount) public {
-        transfer(_to, amount);
+    function safeTransferAndCall(address _to, uint256 _amount) public {
+        safeTransferAndCall(_to, _amount, "");
+      }
+
+    function safeTransferAndCall(address _to, uint256 _amount, bytes _data) public {
+        transfer(_to, _amount);
         require(
-            checkAndCallSafeTransfer(msg.sender, _to, amount),
+            checkAndCallSafeTransfer(msg.sender, _to, _amount, _data),
            "Sent to a contract which is not an ERC20 receiver"
         );
     }
 
-    function checkAndCallSafeTransfer(address _from, address _to, uint256 amount) internal returns (bool) {
+    function checkAndCallSafeTransfer(address _from, address _to, uint256 _amount, bytes _data) internal returns (bool) {
         if (!_to.isContract()) {
             return true;
         }
-        bytes4 retval = ERC20Receiver(_to).onERC20Received(_from, amount);
+        bytes4 retval = ERC20Receiver(_to).onERC20Received(_from, _amount, _data);
         return(retval == ERC20_RECEIVED);
     }
 
