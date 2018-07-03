@@ -5,6 +5,10 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Receiver.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
+// ERC20 Receiver
+import "./ERC20Receiver.sol";
+
+
 // Lib deps
 import "../Libraries/Transaction/Transaction.sol";
 import "../Libraries/ECVerify.sol";
@@ -14,7 +18,7 @@ import "./SparseMerkleTree.sol";
 import "./ValidatorManagerContract.sol";
 
 
-contract RootChain is ERC721Receiver {
+contract RootChain is ERC721Receiver, ERC20Receiver {
 
     /**
      * Event for coin deposit logging.
@@ -26,7 +30,11 @@ contract RootChain is ERC721Receiver {
      * @param denomination Quantity of a particular coin deposited
      * @param from The address of the depositor
      */
+<<<<<<< HEAD
     event Deposit(uint64 indexed slot, uint256 blockNumber, uint64 denomination, address indexed from, address indexed contractAddress);
+=======
+    event Deposit(uint64 indexed slot, uint256 blockNumber, uint256 denomination, address indexed from);
+>>>>>>> Add ERC20/ETH Deposits to RootChain
     /**
      * Event for block submission logging
      * @notice The event indicates the addition of a new Plasma block
@@ -165,17 +173,22 @@ contract RootChain is ERC721Receiver {
     mapping (uint64 => ChallengeLib.Challenge[]) challenges;
 
     // tracking of NFTs deposited in each slot
+    enum Mode {
+        ETH,
+        ERC20,
+        ERC721
+    }
     uint64 public numCoins = 0;
     mapping (uint64 => Coin) coins;
     struct Coin {
-        uint64 uid; // there are up to 2^64 cards, one for every leaf of
-                    // a depth 64 Sparse Merkle Tree
-        uint32 denomination; // Currently set to 1 always, subject to change once the token changes
-        uint256 depositBlock;
+        Mode mode;
+        State state;
         address owner; // who owns that nft
         address contractAddress; // which contract does the coin belong to
-        State state;
         Exit exit;
+        uint256 uid; 
+        uint256 denomination;
+        uint256 depositBlock;
     }
 
     // child chain
@@ -221,23 +234,24 @@ contract RootChain is ERC721Receiver {
     /// @param from The address of the user who is depositing a coin
     /// @param uid The uid of the ERC721 coin being deposited. This is an
     ///            identifier allocated by the ERC721 token contract; it is not
-    ///            related to `slot`.
+    ///            related to `slot`. If the coin is ETH or ERC20 the uid is 0
     /// @param denomination The quantity of a particular coin being deposited
-    function deposit(address from, uint64 uid, uint32 denomination)
+    /// @param mode The type of coin that is being deposited (ETH/ERC721/ERC20)
+    function deposit(address from, uint256 uid, uint256 denomination, Mode mode)
         private
     {
         currentBlock = currentBlock.add(1);
+        uint64 slot = uint64(bytes8(keccak256(abi.encodePacked(numCoins, msg.sender, from))));
 
         // Update state. Leave `exit` empty
-        Coin memory coin;
-        coin.uid = uid;
+        Coin storage coin = coins[slot];
+        coin.uid =  uid;
         coin.contractAddress = msg.sender;
         coin.denomination = denomination;
         coin.depositBlock = currentBlock;
         coin.owner = from;
         coin.state = State.DEPOSITED;
-        uint64 slot = uint64(bytes8(keccak256(abi.encodePacked(numCoins, msg.sender, from))));
-        coins[slot] = coin;
+        coin.mode = mode;
 
         childChain[currentBlock] = ChildBlock({
             // save signed transaction hash as root
@@ -673,12 +687,26 @@ contract RootChain is ERC721Receiver {
 
     /******************** ERC721 ********************/
 
+    function() payable public {
+        deposit(msg.sender, 0, msg.value, Mode.ETH);
+    }
+
+    function onERC20Received(address _from, uint256 amount, bytes)
+        public
+        isTokenApproved(msg.sender)
+        returns(bytes4)
+    {
+        deposit(_from, 0, amount, Mode.ERC20);
+        return ERC20_RECEIVED;
+    }
+
+
     function onERC721Received(address _from, uint256 _uid, bytes)
         public
         isTokenApproved(msg.sender)
         returns(bytes4)
     {
-        deposit(_from, uint64(_uid), uint32(1));
+        deposit(_from, _uid, 1, Mode.ERC721);
         return ERC721_RECEIVED;
     }
 
@@ -711,9 +739,15 @@ contract RootChain is ERC721Receiver {
             proof);
     }
 
+<<<<<<< HEAD
     function getPlasmaCoin(uint64 slot) external view returns(uint64, uint256, uint32, address, address, State) {
         Coin memory c = coins[slot];
         return (c.uid, c.depositBlock, c.denomination, c.owner, c.contractAddress, c.state);
+=======
+    function getPlasmaCoin(uint64 slot) external view returns(uint256, uint256, uint256, address, State, Mode, address) {
+        Coin memory c = coins[slot];
+        return (c.uid, c.depositBlock, c.denomination, c.owner, c.state, c.mode, c.contractAddress);
+>>>>>>> Add ERC20/ETH Deposits to RootChain
     }
 
     function getExit(uint64 slot) external view returns(address, uint256, uint256, State) {
