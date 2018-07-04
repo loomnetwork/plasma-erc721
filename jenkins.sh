@@ -19,12 +19,12 @@ eval "$(pyenv virtualenv-init -)"
 #pyenv virtualenv 3.6.0 general
 pyenv global general
 
-pip install -r requirements.txt
+#pip install -r requirements.txt
 #make lint
-make test
+#make test
 
-cd ../
-bash integration_test.sh
+#cd ../
+#bash integration_test.sh
 
 # build the Go tester and run the unit tests
 cd $REPO_ROOT/loom_test

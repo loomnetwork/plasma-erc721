@@ -47,5 +47,8 @@ echo "Launched Loom - Log(loom.log) Pid(${loom_pid})"
 sleep 10
 
 cd $REPO_ROOT/loom_js_test
+yarn install
+yarn build
+yarn copy-contracts
 yarn test
 cd ..
