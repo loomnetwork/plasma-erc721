@@ -18,7 +18,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "yarn copy-contracts && tsc && yarn tape",
     "copy-contracts": "node ./scripts/copy-contracts.js",
-    "tape": "tape -r dotenv/config dotenv_config_path=./.env.test dist/index.js | tap-spec"
+    "tape": "tape -r dotenv/config dotenv_config_path=./.env.test dist/index.js | tap-spec",
+    "jenkins:tape": "tape -r dotenv/config dotenv_config_path=./.env.test.jenkins dist/index.js | tap-spec"
   },
   "dependencies": {
     "bn.js": "^4.11.8",

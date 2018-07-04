@@ -50,5 +50,5 @@ cd $REPO_ROOT/loom_js_test
 yarn install
 yarn build
 yarn copy-contracts
-yarn test
+yarn jenkins:tape
 cd ..
