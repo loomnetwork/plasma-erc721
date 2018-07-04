@@ -1,0 +1,7 @@
+{
+    "parser": "typescript",
+    "printWidth": 99,
+    "semi": false,
+    "singleQuote": true,
+    "jsxBracketSameLine": true
+}

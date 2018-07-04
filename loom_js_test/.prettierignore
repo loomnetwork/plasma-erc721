@@ -1,0 +1,2 @@
+src/proto/*.d.ts
+src/tests/tests_pb.d.ts

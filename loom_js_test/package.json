@@ -1,0 +1,53 @@
+{
+  "name": "loom-js-plasma-cash-tests",
+  "description": "NodeJS & browser tests for Loom Plama Cash implementation.",
+  "author": {
+    "name": "Loom Network",
+    "url": "https://loomx.io"
+  },
+  "version": "0.1.0",
+  "keywords": [
+    "blockchain",
+    "dappchain"
+  ],
+  "license": "BSD-3-Clause",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:browser": "tsc && webpack",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "node ./scripts/copy-contracts.js && tsc && tape -r dotenv/config dotenv_config_path=./.env.test dist/index.js | tap-spec"
+  },
+  "dependencies": {
+    "bn.js": "^4.11.8",
+    "ethereumjs-util": "^5.2.0",
+    "rlp": "^2.1.0",
+    "web3": "^1.0.0-beta.34"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.0.0-beta.46",
+    "@babel/plugin-transform-runtime": "^7.0.0-beta.46",
+    "@babel/preset-env": "^7.0.0-beta.46",
+    "@babel/runtime": "^7.0.0-beta.46",
+    "@types/bn.js": "^4.11.1",
+    "@types/ethereumjs-util": "^5.2.0",
+    "@types/node": "^10.0.3",
+    "@types/tape": "^4.2.32",
+    "babel-cli": "^6.26.0",
+    "babel-loader": "^8.0.0-beta.2",
+    "dotenv": "^5.0.1",
+    "dotenv-webpack": "^1.5.5",
+    "prettier": "1.12.1",
+    "shelljs": "^0.8.2",
+    "tap-spec": "^5.0.0",
+    "tape": "4.9",
+    "tslint": "^5.9.1",
+    "tslint-config-prettier": "^1.12.0",
+    "tslint-config-standard": "^7.0.0",
+    "typescript": "^2.9.2",
+    "webpack": "^4.6.0",
+    "webpack-cli": "^2.1.2",
+    "webpack-tape-run": "^0.0.7"
+  },
+  "browserslist": "last 2 versions"
+}

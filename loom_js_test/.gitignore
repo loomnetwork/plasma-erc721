@@ -1,0 +1,10 @@
+# gitignore
+
+node_modules
+.DS_Store
+
+# Only apps should have lockfiles
+package-lock.json
+/dist/*
+/.env.test
+/yarn-error.log

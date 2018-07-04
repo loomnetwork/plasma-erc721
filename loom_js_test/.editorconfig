@@ -1,0 +1,13 @@
+# http://editorconfig.org
+
+# This is the top-level config
+root = true
+
+[*]
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{js,ts}]
+indent_style = space
+indent_size = 2
+charset = utf-8
