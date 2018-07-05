@@ -7,3 +7,4 @@ import './challenge-after-demo'
 // This test is currently failing, it's disabled here so builds don't fail on Jenkins,
 // re-enable when the test is fixed.
 // import './challenge-between-demo'
+import './challenge-before-demo'
