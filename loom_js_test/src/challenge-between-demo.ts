@@ -74,20 +74,20 @@ test('Plasma Cash Challenge Between Demo', async t => {
   // FIXME: the start exit tx is reverted by the evm, need to figure out why, perhaps tx proofs are
   //        wrong?
   // Alice attempts to exit here double-spent coin
-  //   await alice.startExitAsync({
-  //     slot: deposit1Slot,
-  //     prevBlockNum: coin.depositBlockNum,
-  //     exitBlockNum: eveToAliceBlockNum
-  //   })
-  // 
-  //   // Alice's exit should be auto-challenged by Bob's client, but watching/auto-challenge hasn't
-  //   // been implemented yet, so challenge the exit manually for now...
-  //   await bob.challengeBetweenAsync({ slot: deposit1Slot, challengingBlockNum: eveToBobBlockNum })
-  // 
+  await alice.startExitAsync({
+      slot: deposit1Slot,
+      prevBlockNum: coin.depositBlockNum,
+      exitBlockNum: eveToAliceBlockNum
+  })
+
+  // Alice's exit should be auto-challenged by Bob's client, but watching/auto-challenge hasn't
+  // been implemented yet, so challenge the exit manually for now...
+  await bob.challengeBetweenAsync({ slot: deposit1Slot, challengingBlockNum: eveToBobBlockNum })
+
   await bob.startExitAsync({
-    slot: deposit1Slot,
-    prevBlockNum: coin.depositBlockNum,
-    exitBlockNum: eveToBobBlockNum
+      slot: deposit1Slot,
+      prevBlockNum: coin.depositBlockNum,
+      exitBlockNum: eveToBobBlockNum
   })
 
   // bob.stop_watching_exits(deposit1_utxo)
