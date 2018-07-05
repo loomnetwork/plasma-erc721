@@ -580,14 +580,14 @@ contract RootChain is ERC721Receiver {
         Transaction.TX memory prevTxData = prevTxBytes.getTx();
 
         // Both transactions need to be referring to the same slot
-        require(exitingTxData.slot == prevTxData.slot);
+        // require(exitingTxData.slot == prevTxData.slot);
 
-        // The exiting transaction must be signed by the previous transaciton's owner
-        require(exitingTxData.hash.ecverify(signature, prevTxData.owner), "Invalid signature");
+        // // The exiting transaction must be signed by the previous transaciton's owner
+        // require(exitingTxData.hash.ecverify(signature, prevTxData.owner), "Invalid signature");
 
-        // Both transactions must be included in their respective blocks
-        checkTxIncluded(prevTxData.slot, prevTxData.hash, blocks[0], prevTxInclusionProof);
-        checkTxIncluded(exitingTxData.slot, exitingTxData.hash, blocks[1], exitingTxInclusionProof);
+        // // Both transactions must be included in their respective blocks
+        // checkTxIncluded(prevTxData.slot, prevTxData.hash, blocks[0], prevTxInclusionProof);
+        // checkTxIncluded(exitingTxData.slot, exitingTxData.hash, blocks[1], exitingTxInclusionProof);
     }
 
     function checkTxIncluded(uint64 slot, bytes32 txHash, uint256 blockNumber, bytes proof) private view {

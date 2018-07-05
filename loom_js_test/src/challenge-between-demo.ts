@@ -75,9 +75,9 @@ test('Plasma Cash Challenge Between Demo', async t => {
   //        wrong?
   // Alice attempts to exit here double-spent coin
   await alice.startExitAsync({
-    slot: deposit1Slot,
-    prevBlockNum: coin.depositBlockNum,
-    exitBlockNum: eveToAliceBlockNum
+      slot: deposit1Slot,
+      prevBlockNum: coin.depositBlockNum,
+      exitBlockNum: eveToAliceBlockNum
   })
 
   // Alice's exit should be auto-challenged by Bob's client, but watching/auto-challenge hasn't
@@ -85,9 +85,9 @@ test('Plasma Cash Challenge Between Demo', async t => {
   await bob.challengeBetweenAsync({ slot: deposit1Slot, challengingBlockNum: eveToBobBlockNum })
 
   await bob.startExitAsync({
-    slot: deposit1Slot,
-    prevBlockNum: coin.depositBlockNum,
-    exitBlockNum: eveToBobBlockNum
+      slot: deposit1Slot,
+      prevBlockNum: coin.depositBlockNum,
+      exitBlockNum: eveToBobBlockNum
   })
 
   // bob.stop_watching_exits(deposit1_utxo)
