@@ -61,7 +61,7 @@ test('Plasma Cash Challenge Before Demo', async t => {
   // Operator includes it
   const trudyToMalloryBlock = await authority.submitPlasmaBlockAsync()
 
-  // Mallory gives the coin back to Trudy. 
+  // Mallory gives the coin back to Trudy.
   await mallory.transferTokenAsync({
     slot: deposit1Slot,
     prevBlockNum: trudyToMalloryBlock,
