@@ -5,13 +5,16 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func main() {
 
 	client.InitClients("http://localhost:8545")
 	client.InitTokenClient("http://localhost:8545")
+	ganache, err := client.ConnectToGanache("http://localhost:8545")
+	exitIfError(err)
 
 	svc, err := client.NewLoomChildChainService("http://localhost:46658/rpc", "http://localhost:46658/query")
 	exitIfError(err)
@@ -21,6 +24,10 @@ func main() {
 	eve := client.NewClient(svc, client.GetRootChain("eve"), client.GetTokenContract("eve"))
 	authority := client.NewClient(svc, client.GetRootChain("authority"),
 		client.GetTokenContract("authority"))
+	aliceAccount, err := alice.TokenContract.Account()
+	exitIfError(err)
+	bobAccount, err := bob.TokenContract.Account()
+	exitIfError(err)
 
 	bobTokensStart, err := bob.TokenContract.BalanceOf()
 	exitIfError(err)
@@ -28,67 +35,76 @@ func main() {
 	// Give Eve 5 tokens
 	eve.Register()
 
+	startBlockHeader, err := ganache.HeaderByNumber(context.TODO(), nil)
+	exitIfError(err)
+
 	// Eve deposits a coin
 	txHash := eve.Deposit(11)
-	time.Sleep(1 * time.Second)
 	deposit1, err := eve.RootChain.DepositEventData(txHash)
 	exitIfError(err)
 
-	// wait to make sure that events get fired correctly
-	time.Sleep(2)
+	authority.DebugForwardDepositEvents(startBlockHeader.Number.Uint64(), startBlockHeader.Number.Uint64()+100)
 
 	// Eve sends her plasma coin to Bob
 	coin, err := eve.PlasmaCoin(deposit1.Slot)
 	exitIfError(err)
-	bobaccount, err := bob.TokenContract.Account()
-	exitIfError(err)
-
-	err = eve.SendTransaction(deposit1.Slot, coin.DepositBlockNum, 1, bobaccount.Address) //eve_to_bob
-	exitIfError(err)
-
-	authority.SubmitBlock()
-	eve_to_bob_block, err := authority.GetBlockNumber()
-	exitIfError(err)
-
-	bob.WatchExits(deposit1.Slot)
-
-	alicaccount, err := bob.TokenContract.Account()
-	exitIfError(err)
-	// Eve sends this same plasma coin to Alice
-	err = eve.SendTransaction(deposit1.Slot, coin.DepositBlockNum, 1, alicaccount.Address) //eve_to_alice
+	err = eve.SendTransaction(deposit1.Slot, coin.DepositBlockNum, 1, bobAccount.Address)
 	exitIfError(err)
 
 	err = authority.SubmitBlock()
 	exitIfError(err)
+	eveToBobBlockNum, err := authority.GetBlockNumber()
+	exitIfError(err)
 
+	// TODO: bob.WatchExits(deposit1.Slot)
+
+	// Eve sends this same plasma coin to Alice
+	err = eve.SendTransaction(deposit1.Slot, coin.DepositBlockNum, 1, aliceAccount.Address)
+	exitIfError(err)
+
+	err = authority.SubmitBlock()
+	exitIfError(err)
 	eveToAliceBlock, err := authority.GetBlockNumber()
 	exitIfError(err)
 
+	fmt.Printf("Challenge Between - Alice attempts to exit slot %v prevBlock %v exitBlock %v\n",
+		deposit1.Slot, coin.DepositBlockNum, eveToAliceBlock)
 	// Alice attempts to exit here double-spent coin
-	// Bob auto-challenges Alice's exit
-	alice.StartExit(deposit1.Slot, coin.DepositBlockNum, eveToAliceBlock)
-
-	// bob.challenge_between(deposit1.Slot, eve_to_bob_block)
-	// Wait for challenge
-	time.Sleep(2)
-	bob.StartExit(deposit1.Slot, coin.DepositBlockNum, eve_to_bob_block)
-	bob.StopWatchingExits(deposit1.Slot)
-
-	ganache, err := client.ConnectToGanache("http://localhost:8545")
+	_, err = alice.StartExit(deposit1.Slot, coin.DepositBlockNum, eveToAliceBlock)
 	exitIfError(err)
+
+	fmt.Printf("Bob is challenging slot %v at block %v\n", deposit1.Slot, eveToBobBlockNum)
+	// Alice's exit should be auto-challenged by Bob's client, but watching/auto-challenge hasn't
+	// been implemented yet, so challenge the exit manually for now...
+	_, err = bob.ChallengeBetween(deposit1.Slot, eveToBobBlockNum)
+	exitIfError(err)
+
+	fmt.Printf("Bob attempts to exit slot %v prevBlock %v exitBlock %v\n",
+		deposit1.Slot, coin.DepositBlockNum, eveToBobBlockNum)
+	_, err = bob.StartExit(deposit1.Slot, coin.DepositBlockNum, eveToBobBlockNum)
+	exitIfError(err)
+
+	// TODO: bob.StopWatchingExits(deposit1.Slot)
+
 	_, err = ganache.IncreaseTime(context.TODO(), 8*24*3600)
 	exitIfError(err)
 
+	fmt.Println("Finalizing exits")
+	exitIfError(authority.FinalizeExits())
+
+	fmt.Printf("Bob attempts to withdraw slot %v\n", deposit1.Slot)
 	err = bob.Withdraw(deposit1.Slot)
 	exitIfError(err)
 
-	//TODO
-	bobBalanceBefore := 0
-	bobBalanceAfter := 0
-	//bobBalanceBefore = w3.eth.getBalance(bob.token_contract.account.address)
-	//bob.withdraw_bonds()
-	//bobBalanceAfter = w3.eth.getBalance(bob.token_contract.account.address)
-	if !(bobBalanceBefore < bobBalanceAfter) {
+	bobBalanceBefore, err := ganache.BalanceAt(context.TODO(), common.HexToAddress(bobAccount.Address), nil)
+	exitIfError(err)
+	fmt.Println("Bob attempts to withdraw bonds")
+	err = bob.WithdrawBonds()
+	exitIfError(err)
+	bobBalanceAfter, err := ganache.BalanceAt(context.TODO(), common.HexToAddress(bobAccount.Address), nil)
+	exitIfError(err)
+
+	if !(bobBalanceBefore.Cmp(bobBalanceAfter) < 0) {
 		log.Fatal("END: Bob did not withdraw his bonds")
 	}
 

@@ -60,6 +60,10 @@ func main() {
 		log.Fatalf("START: Charlie has incorrect number of tokens")
 	}
 
+	currentBlock, err := authority.GetBlockNumber()
+	exitIfError(err)
+	log.Printf("current block: %v", currentBlock)
+
 	startBlockHeader, err := ganache.HeaderByNumber(context.TODO(), nil)
 	exitIfError(err)
 
@@ -91,7 +95,6 @@ func main() {
 
 	//Alice to Bob, and Alice to Charlie. We care about the Alice to Bob
 	// transaction
-	//	blkNum := int64(3)
 	account, err := bob.TokenContract.Account()
 	exitIfError(err)
 	err = alice.SendTransaction(deposit3.Slot, deposit3.BlockNum.Int64(), 1, account.Address) //aliceToBob
@@ -100,22 +103,30 @@ func main() {
 	exitIfError(err)
 	err = alice.SendTransaction(deposit2.Slot, deposit2.BlockNum.Int64(), 1, account.Address) //randomTx
 	exitIfError(err)
-	authority.SubmitBlock()
+	exitIfError(authority.SubmitBlock())
+	plasmaBlock1, err := authority.GetBlockNumber()
+	exitIfError(err)
+
+	// Add an empty block in betweeen (for proof of exclusion reasons)
+	exitIfError(authority.SubmitBlock())
 
 	// Bob to Charlie
-	blkNum := int64(1000)
+	blkNum := plasmaBlock1
 	account, err = charlie.TokenContract.Account() // the prev transaction was included in block 1000
 	exitIfError(err)
 	err = bob.SendTransaction(deposit3.Slot, blkNum, 1, account.Address) //bobToCharlie
 	exitIfError(err)
-	authority.SubmitBlock()
+
+	// TODO: verify coin history
+
+	exitIfError(authority.SubmitBlock())
+	plasmaBlock2, err := authority.GetBlockNumber()
+	exitIfError(err)
 
 	// Charlie should be able to submit an exit by referencing blocks 0 and 1 which
 	// included his transaction.
-	prevTxBlkNum := int64(1000)
-	exitingTxBlkNum := int64(2000)
 	charlie.DebugCoinMetaData(slots)
-	_, err = charlie.StartExit(deposit3.Slot, prevTxBlkNum, exitingTxBlkNum)
+	_, err = charlie.StartExit(deposit3.Slot, plasmaBlock1, plasmaBlock2)
 	exitIfError(err)
 	charlie.DebugCoinMetaData(slots)
 

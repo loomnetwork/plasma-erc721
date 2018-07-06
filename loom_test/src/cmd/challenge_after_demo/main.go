@@ -69,20 +69,18 @@ func main() {
 
 	authority.DebugForwardDepositEvents(startBlockHeader.Number.Uint64(), startBlockHeader.Number.Uint64()+100)
 
+	err = authority.SubmitBlock()
+	exitIfError(err)
 	currentBlock, err = authority.GetBlockNumber()
 	exitIfError(err)
-	log.Printf("current block: %v", currentBlock)
+	log.Printf("plasma block 1: %v\n", currentBlock)
 
 	err = authority.SubmitBlock()
 	exitIfError(err)
 	currentBlock, err = authority.GetBlockNumber()
 	exitIfError(err)
-	log.Printf("current block: %v", currentBlock)
+	log.Printf("plasma block 2: %v\n", currentBlock)
 
-	err = authority.SubmitBlock()
-	exitIfError(err)
-
-	log.Printf("SubmitBlock\n")
 	// Mallory sends her coin to Dan
 	// Coin 6 was the first deposit of
 	coin, err := mallory.RootChain.PlasmaCoin(depositSlot1)
@@ -101,12 +99,11 @@ func main() {
 	exitIfError(err)
 	plasmaBlock3, err := authority.GetBlockNumber()
 	exitIfError(err)
-	log.Printf("current block: %v", plasmaBlock3)
+	log.Printf("plasma block 3: %v\n", plasmaBlock3)
 
 	// Mallory attempts to exit spent coin (the one sent to Dan)
 	log.Printf("Mallory trying an exit %d on block number %d\n", depositSlot1, coin.DepositBlockNum)
 	mallory.StartExit(depositSlot1, 0, coin.DepositBlockNum)
-	log.Printf("StartExit\n")
 
 	// Dan's transaction depositSlot1 included in plasmaBlock3. He challenges!
 	dan.ChallengeAfter(depositSlot1, plasmaBlock3)
@@ -117,7 +114,6 @@ func main() {
 	// After 8 days pass,
 	_, err = ganache.IncreaseTime(context.TODO(), 8*24*3600)
 	exitIfError(err)
-	log.Printf("increase time\n")
 
 	authority.FinalizeExits()
 	log.Printf("FinalizeExits\n")
