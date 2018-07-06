@@ -8,3 +8,4 @@ import './challenge-after-demo'
 // re-enable when the test is fixed.
 // import './challenge-between-demo'
 import './challenge-before-demo'
+import './respond-challenge-before-demo'
