@@ -32,6 +32,7 @@ export GOPATH=/tmp/gopath-$BUILD_TAG:`pwd`
 make clean
 make deps
 make cli
+make challenge
 make test
 
 cd $REPO_ROOT

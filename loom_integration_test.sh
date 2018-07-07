@@ -50,4 +50,6 @@ sleep 10
 
 cd $REPO_ROOT/loom_test
 ./plasmacash_tester
+./plasmacash_challenge_after_tester
+./plasmacash_challenge_between_tester
 cd ..
