@@ -2,7 +2,7 @@ CURRENT_DIRECTORY = $(shell pwd)
 
 
 
-.PHONY: all clean test lint deps demos
+.PHONY: all clean test lint deps demos abigen
 
 demos:
 	go build -tags "evm" -o plasmacash_tester src/cmd/demo/main.go
@@ -18,10 +18,11 @@ lint:
 	golint ./...
 
 abigen:
+	go build github.com/ethereum/go-ethereum/cmd/abigen
 	cat ../server/build/contracts/RootChain.json | jq '.abi' > rootchain_abi.json
-	abigen --abi rootchain_abi.json  --pkg ethcontract --type RootChain --out src/ethcontract/root_chain.go 
+	./abigen --abi rootchain_abi.json  --pkg ethcontract --type RootChain --out src/ethcontract/root_chain.go 
 	cat ../server/build/contracts/CryptoCards.json | jq '.abi' > cryptocards_abi.json
-	abigen --abi cryptocards_abi.json  --pkg ethcontract --type Cards --out src/ethcontract/cards.go
+	./abigen --abi cryptocards_abi.json  --pkg ethcontract --type Cards --out src/ethcontract/cards.go
 	
 deps:
 	go get \
