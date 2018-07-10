@@ -25,7 +25,7 @@ contract RootChain is ERC721Receiver {
      * @param denomination Quantity of a particular coin deposited
      * @param from The address of the depositor
      */
-    event Deposit(uint64 indexed slot, uint256 blockNumber, uint64 denomination, address indexed from);
+    event Deposit(uint64 indexed slot, uint256 blockNumber, uint64 denomination, address indexed from, address indexed contractAddress);
     /**
      * Event for block submission logging
      * @notice The event indicates the addition of a new Plasma block
@@ -242,7 +242,9 @@ contract RootChain is ERC721Receiver {
             slot,
             currentBlock,
             denomination,
-            from);
+            from,
+            msg.sender
+        );
 
         numCoins += 1;
     }
@@ -650,9 +652,9 @@ contract RootChain is ERC721Receiver {
             proof);
     }
 
-    function getPlasmaCoin(uint64 slot) external view returns(uint64, uint256, uint32, address, State) {
+    function getPlasmaCoin(uint64 slot) external view returns(uint64, uint256, uint32, address, address, State) {
         Coin memory c = coins[slot];
-        return (c.uid, c.depositBlock, c.denomination, c.owner, c.state);
+        return (c.uid, c.depositBlock, c.denomination, c.owner, c.contractAddress, c.state);
     }
 
     function getExit(uint64 slot) external view returns(address, uint256, uint256, State) {

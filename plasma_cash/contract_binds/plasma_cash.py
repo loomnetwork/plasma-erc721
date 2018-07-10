@@ -138,7 +138,8 @@ class PlasmaCash(Contract):
             'deposit_block': data[1],
             'denomination': data[2],
             'owner': data[3],
-            'state': data[4],
+            'contract_address': data[4],
+            'state': data[5],
         }
         return ret
 
