@@ -28,9 +28,10 @@ type RootChainService struct {
 }
 
 func (d *RootChainService) PlasmaCoin(slot uint64) (*plasma_cash.PlasmaCoin, error) {
-	slot, depositBlockNum, denom, ownerAddr, state, err := d.plasmaContract.GetPlasmaCoin(&bind.CallOpts{
-		From: d.callerAddr,
-	}, slot)
+	slot, depositBlockNum, denom, ownerAddr, contractAddr, state, err := d.plasmaContract.GetPlasmaCoin(
+		&bind.CallOpts{From: d.callerAddr},
+		slot,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -39,6 +40,7 @@ func (d *RootChainService) PlasmaCoin(slot uint64) (*plasma_cash.PlasmaCoin, err
 		DepositBlockNum: depositBlockNum.Int64(),
 		Denomination:    denom,
 		Owner:           ownerAddr.Hex(),
+		ContractAddress: contractAddr.Hex(),
 		State:           plasma_cash.PlasmaCoinState(state),
 	}, nil
 }
@@ -180,7 +182,7 @@ func (d *RootChainService) DebugCoinMetaData(slots []uint64) {
 	}
 	for _, y := range slots {
 		//slot, c.depositBlock, c.denomination, c.owner, c.state
-		returnSlot, _, _, owner, state, err := d.plasmaContract.GetPlasmaCoin(d.callOpts, y)
+		returnSlot, _, _, owner, _, state, err := d.plasmaContract.GetPlasmaCoin(d.callOpts, y)
 		fmt.Printf("Num coins -(slot)-%v -(returnSlot)-%v -(state)-%v -(owner)-%x\n", y, returnSlot, state, owner)
 
 		if err != nil {
