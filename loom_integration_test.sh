@@ -22,11 +22,11 @@ function start_chains {
 # Stops the Ganache node & the DAppChain node
 function stop_chains {
     echo "exiting ganache-pid(${ganache_pid})"
-    echo "exiting loom-pid(${loom_pid})"
-    echo "killing ${LOOM_DIR}/contracts/hostileoperator.1.0.0"
     kill -9 "${ganache_pid}"    &> /dev/null
+    echo "exiting loom-pid(${loom_pid})"
     kill -9 "${loom_pid}"   &> /dev/null
-    pkill -f "${LOOM_DIR}/contracts/hostileoperator.1.0.0" || return 0
+    echo "killing ${LOOM_DIR}/contracts/hostileoperator.1.0.0"
+    pkill -f "${LOOM_DIR}/contracts/hostileoperator.1.0.0" || true
 }
 
 function init_honest_dappchain {
@@ -56,7 +56,7 @@ function cleanup {
 
 REPO_ROOT=`pwd`
 LOOM_DIR=`pwd`/tmp/loom-plasma-$BUILD_TAG
-BUILD_NUMBER=276
+BUILD_NUMBER=335
 
 rm -rf  $LOOM_DIR; true
 mkdir -p $LOOM_DIR

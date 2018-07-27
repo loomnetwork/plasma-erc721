@@ -32,5 +32,5 @@ func NewLoomChildChainService(hostile bool, writeuri, readuri string) (plasma_ca
 	if hostile {
 		contractName = "hostileoperator"
 	}
-	return client.NewPlasmaCashClient(contractName, signer, "", writeuri, readuri)
+	return client.NewPlasmaCashClient(contractName, signer, "default", writeuri, readuri)
 }
