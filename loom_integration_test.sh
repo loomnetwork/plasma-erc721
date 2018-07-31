@@ -102,7 +102,7 @@ init_honest_dappchain
 start_chains
 
 cd $REPO_ROOT/loom_js_test
-yarn jenkins:tape:honest
+yarn jenkins:test:honest
 
 stop_chains
 # Wait for Ganache & Loom to stop
@@ -112,4 +112,4 @@ init_hostile_dappchain
 start_chains
 
 cd $REPO_ROOT/loom_js_test
-yarn jenkins:tape:hostile
+yarn jenkins:test:hostile
