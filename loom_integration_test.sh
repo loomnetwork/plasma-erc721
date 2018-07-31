@@ -49,9 +49,9 @@ function init_hostile_dappchain {
 function cleanup {
     stop_chains
 
-    if [[ $LOOM_DIR ]]; then 
-        rm -rf $LOOM_DIR
-    fi
+    #if [[ $LOOM_DIR ]]; then 
+    #    rm -rf $LOOM_DIR
+    #fi
 }
 
 REPO_ROOT=`pwd`
