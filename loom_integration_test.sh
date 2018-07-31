@@ -97,6 +97,10 @@ cd $REPO_ROOT/loom_test
 ./plasmacash_challenge_before_tester -hostile
 ./plasmacash_respond_challenge_before_tester -hostile
 
+stop_chains
+# Wait for Ganache & Loom to stop
+sleep 10
+
 # Reset the DAppChain again for the JS tests
 init_honest_dappchain
 start_chains
