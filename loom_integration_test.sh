@@ -10,7 +10,7 @@ function start_chains {
     echo 'Launched ganache' $ganache_pid
 
     cd $LOOM_DIR
-    $LOOM_BIN run > loom.log 2>&1 &  
+    CONTRACT_LOG_LEVEL="debug" CONTRACT_LOG_DESTINATION="file://contract.log" $LOOM_BIN run > loom.log 2>&1 &  
     loom_pid=$!
     echo "Launched Loom - Log(loom.log) Pid(${loom_pid})"
 }
@@ -32,7 +32,7 @@ function cleanup {
 
 REPO_ROOT=`pwd`
 LOOM_DIR=`pwd`/tmp/loom-plasma-$BUILD_TAG
-BUILD_NUMBER=275
+BUILD_NUMBER=324
 
 rm -rf  $LOOM_DIR; true
 mkdir -p $LOOM_DIR
@@ -62,7 +62,7 @@ cd $REPO_ROOT/loom_test
 cd ..
 
 stop_chains
-sleep 10
+sleep 60
 
 # Most challenge tests require a hostile/dumb Plasma Cash operator
 cd $LOOM_DIR
@@ -75,15 +75,23 @@ cd $REPO_ROOT/loom_test
 make contracts
 mkdir $LOOM_DIR/contracts
 cp contracts/hostileoperator.1.0.0 $LOOM_DIR/contracts/hostileoperator.1.0.0
+chmod +x $LOOM_DIR/contracts/hostileoperator.1.0.0
 cp hostile.genesis.json $LOOM_DIR/genesis.json
 
-start_chains
+# let's see if this plugin can start...
+cd $LOOM_DIR/contracts
+LOOM_CONTRACT=loomrocks ./hostileoperator.1.0.0
+contract_pid=$!
 sleep 10
+kill -9 "${contract_pid}" &> /dev/null
 
-cd $REPO_ROOT/loom_test
-./plasmacash_tester -hostile
-./plasmacash_challenge_after_tester -hostile
-./plasmacash_challenge_between_tester -hostile
-./plasmacash_challenge_before_tester -hostile
-./plasmacash_respond_challenge_before_tester -hostile
-cd ..
+#start_chains
+#sleep 10
+
+#cd $REPO_ROOT/loom_test
+#./plasmacash_tester -hostile
+#./plasmacash_challenge_after_tester -hostile
+#./plasmacash_challenge_between_tester -hostile
+#./plasmacash_challenge_before_tester -hostile
+#./plasmacash_respond_challenge_before_tester -hostile
+#cd ..

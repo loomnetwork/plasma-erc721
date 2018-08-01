@@ -51,5 +51,6 @@ deps:
 clean:
 	go clean
 	rm -f \
+		contracts/hostileoperator.1.0.0 \
 		src/types/types.pb.go \
-		testdata/test.pb.go \
+		testdata/test.pb.go
