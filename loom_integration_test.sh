@@ -69,6 +69,7 @@ function init_hostile_dappchain {
     init_honest_dappchain
 
     cd $REPO_ROOT/loom_test
+    rm -rf $LOOM_DIR/contracts; true
     mkdir $LOOM_DIR/contracts
     cp contracts/hostileoperator.1.0.0 $LOOM_DIR/contracts/hostileoperator.1.0.0
     cp hostile.genesis.json $LOOM_DIR/genesis.json
