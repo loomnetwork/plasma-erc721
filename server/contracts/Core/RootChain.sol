@@ -25,7 +25,7 @@ contract RootChain is ERC721Receiver {
      * @param denomination Quantity of a particular coin deposited
      * @param from The address of the depositor
      */
-    event Deposit(uint64 indexed slot, uint256 blockNumber, uint64 denomination, address indexed from, address indexed contractAddress);
+    event Deposit(uint64 indexed slot, uint256 blockNumber, uint256 denomination, address indexed from, address indexed contractAddress);
     /**
      * Event for block submission logging
      * @notice The event indicates the addition of a new Plasma block
@@ -159,11 +159,10 @@ contract RootChain is ERC721Receiver {
     uint64 public numCoins = 0;
     mapping (uint64 => Coin) coins;
     struct Coin {
-        uint64 uid; // there are up to 2^64 cards, one for every leaf of
-                    // a depth 64 Sparse Merkle Tree
-        uint32 denomination; // Currently set to 1 always, subject to change once the token changes
+        uint256 uid; 
+        uint256 denomination;
         uint256 depositBlock;
-        address owner; // who owns that nft
+        address owner; 
         address contractAddress; // which contract does the coin belong to
         State state;
         Exit exit;
@@ -214,7 +213,7 @@ contract RootChain is ERC721Receiver {
     ///            identifier allocated by the ERC721 token contract; it is not
     ///            related to `slot`.
     /// @param denomination The quantity of a particular coin being deposited
-    function deposit(address from, uint64 uid, uint32 denomination)
+    function deposit(address from, uint256 uid, uint256 denomination)
         private
     {
         currentBlock = currentBlock.add(1);
@@ -383,7 +382,7 @@ contract RootChain is ERC721Receiver {
     /// @param slot The slot of the coin being withdrawn
     function withdraw(uint64 slot) external isState(slot, State.EXITED) {
         require(coins[slot].owner == msg.sender, "You do not own that UTXO");
-        ERC721(coins[slot].contractAddress).safeTransferFrom(address(this), msg.sender, uint256(coins[slot].uid));
+        ERC721(coins[slot].contractAddress).safeTransferFrom(address(this), msg.sender, coins[slot].uid);
     }
 
     /******************** CHALLENGES ********************/
@@ -619,7 +618,7 @@ contract RootChain is ERC721Receiver {
         isTokenApproved(msg.sender)
         returns(bytes4)
     {
-        deposit(_from, uint64(_uid), uint32(1));
+        deposit(_from, _uid, 1);
         return ERC721_RECEIVED;
     }
 
@@ -652,7 +651,7 @@ contract RootChain is ERC721Receiver {
             proof);
     }
 
-    function getPlasmaCoin(uint64 slot) external view returns(uint64, uint256, uint32, address, address, State) {
+    function getPlasmaCoin(uint64 slot) external view returns(uint256, uint256, uint256, address, address, State) {
         Coin memory c = coins[slot];
         return (c.uid, c.depositBlock, c.denomination, c.owner, c.contractAddress, c.state);
     }

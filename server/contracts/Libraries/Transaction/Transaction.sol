@@ -10,9 +10,9 @@ library Transaction {
 
     struct TX {
         uint64 slot;
-        uint32 denomination; // 2**32 more than enough for NFTs, helps pack in 1 slot
         address owner;
         bytes32 hash;
+        uint256 denomination; // 2**32 more than enough for NFTs, helps pack in 1 slot
         uint256 prevBlock;
     }
 
@@ -21,8 +21,8 @@ library Transaction {
         TX memory transaction;
 
         transaction.slot = uint64(rlpTx[0].toUint());
-        transaction.prevBlock = uint256(rlpTx[1].toUint());
-        transaction.denomination = uint32(rlpTx[2].toUint());
+        transaction.prevBlock = rlpTx[1].toUint();
+        transaction.denomination = rlpTx[2].toUint();
         transaction.owner = rlpTx[3].toAddress();
         if (transaction.prevBlock == 0) { // deposit transaction
             transaction.hash = keccak256(abi.encodePacked(transaction.slot));
