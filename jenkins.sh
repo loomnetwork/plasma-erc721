@@ -42,4 +42,4 @@ yarn build
 yarn copy-contracts
 
 cd $REPO_ROOT
-bash loom_integration_test.sh
+REPO_ROOT=`pwd` IS_JENKINS_ENV=true bash loom_integration_test.sh
