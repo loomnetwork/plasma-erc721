@@ -64,6 +64,12 @@ export async function runDemo(t: test.Test) {
     'plasma contract should have 3 tokens in cards contract'
   )
 
+  // NOTE: In practice the Plasma Cash Oracle will submit the deposits to the DAppChain,
+  // we're doing it here manually to simplify the test setup.
+  for (let i = 0; i < deposits.length; i++) {
+    await authority.submitPlasmaDepositAsync(deposits[i])
+  }
+
   // Alice to Bob, and Alice to Charlie. We care about the Alice to Bob
   // transaction
   const deposit3 = deposits[2]
