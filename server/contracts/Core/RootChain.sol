@@ -355,6 +355,8 @@ contract RootChain is ERC721Receiver {
             // Update coin state & penalize exitor
             coin.state = State.DEPOSITED;
             slashBond(coin.exit.owner, challengers[slot]);
+            freeBond(challengers[slot]);
+
         // otherwise, the exit has not been challenged, or it has been challenged and responded
         } else {
             // Update coin's owner

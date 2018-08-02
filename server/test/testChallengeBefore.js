@@ -100,8 +100,9 @@ contract("Plasma ERC721 - Invalid History Challenge / `challengeBefore`", async 
             assert.equal(await cards.balanceOf.call(elliot), 0);
             assert.equal(await cards.balanceOf.call(plasma.address), 3);
 
-            // On the contrary, his bond must be slashed, and `challenger` must be able to claim it
-            await txlib.withdrawBonds(plasma, challenger, 0.1);
+            // On the contrary, his bond must be slashed, and `challenger` must be able to claim it, 
+            // along with his bond for initiating the challenge
+            await txlib.withdrawBonds(plasma, challenger, 0.2);
         });
 
         it("Alice gives coin to Bob who gives it back to Alice. After some time, an invalid spend of that coin happens. Alice challenges but challenger tries an invalid response", async function() {
@@ -243,6 +244,8 @@ contract("Plasma ERC721 - Invalid History Challenge / `challengeBefore`", async 
             assert.equal((await cards.balanceOf.call(elliot)).toNumber(), 1);
             assert.equal((await cards.balanceOf.call(plasma.address)).toNumber(), 2);
 
+            // On the contrary, his bond must be slashed, and `challenger` must be able to claim it, 
+            // along with his bond for initiating the challenge
             await txlib.withdrawBonds(plasma, elliot, 0.2);
         });
 
@@ -336,8 +339,9 @@ contract("Plasma ERC721 - Invalid History Challenge / `challengeBefore`", async 
             assert.equal(await cards.balanceOf.call(elliot), 0);
             assert.equal(await cards.balanceOf.call(plasma.address), 3);
 
-            // // On the contrary, his bond must be slashed, and `challenger` must be able to claim it
-            await txlib.withdrawBonds(plasma, challenger, 0.1);
+            // On the contrary, his bond must be slashed, and `challenger` must be able to claim it, 
+            // along with his bond for initiating the challenge
+            await txlib.withdrawBonds(plasma, challenger, 0.2);
         });
 
         async function elliotInvalidHistoryExit(UTXO) {
