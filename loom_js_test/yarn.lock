@@ -3197,8 +3197,8 @@ flush-write-stream@^1.0.0:
     readable-stream "^2.0.4"
 
 follow-redirects@^1.3.0:
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.5.0.tgz#234f49cf770b7f35b40e790f636ceba0c3a0ab77"
+  version "1.5.2"
+  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.5.2.tgz#5a9d80e0165957e5ef0c1210678fc5c4acb9fb03"
   dependencies:
     debug "^3.1.0"
 
@@ -3486,8 +3486,8 @@ globby@^8.0.1:
     slash "^1.0.0"
 
 google-protobuf@3.6:
-  version "3.6.0"
-  resolved "https://registry.yarnpkg.com/google-protobuf/-/google-protobuf-3.6.0.tgz#e2bafb00c20a8734174d8f89e0a842709e2ceed0"
+  version "3.6.1"
+  resolved "https://registry.yarnpkg.com/google-protobuf/-/google-protobuf-3.6.1.tgz#7ef58e2bea137a93cdaf5cfd5afa5f6abdd92025"
 
 got@7.1.0, got@^7.0.0, got@^7.1.0:
   version "7.1.0"
@@ -4425,9 +4425,9 @@ long@^3.2.0:
   version "3.2.0"
   resolved "https://registry.yarnpkg.com/long/-/long-3.2.0.tgz#d821b7138ca1cb581c172990ef14db200b5c474b"
 
-loom-js@loomnetwork/loom-js#update-abi:
-  version "1.16.1"
-  resolved "https://codeload.github.com/loomnetwork/loom-js/tar.gz/7cf1f6c1b3de82a07c12d734485b4266222d6357"
+loom-js@1.16.2:
+  version "1.16.2"
+  resolved "https://registry.yarnpkg.com/loom-js/-/loom-js-1.16.2.tgz#f228996e2300f12798b51b9a97611cc51a777033"
   dependencies:
     axios "^0.18.0"
     bn.js "^4.11.8"
@@ -5904,8 +5904,8 @@ rlp@^2.0.0, rlp@^2.1.0:
     safe-buffer "^5.1.1"
 
 rpc-websockets@^4.1.1:
-  version "4.2.0"
-  resolved "https://registry.yarnpkg.com/rpc-websockets/-/rpc-websockets-4.2.0.tgz#46bcb94c3c471d0f699a4cc44da1d4b03da233de"
+  version "4.2.6"
+  resolved "https://registry.yarnpkg.com/rpc-websockets/-/rpc-websockets-4.2.6.tgz#a7dcfeb6b52dea252198e080c93c87be796f96f0"
   dependencies:
     assert-args "^1.2.1"
     babel-runtime "^6.26.0"
@@ -7513,8 +7513,8 @@ ws@^3.0.0:
     ultron "~1.1.0"
 
 ws@^5.1.1:
-  version "5.2.1"
-  resolved "https://registry.yarnpkg.com/ws/-/ws-5.2.1.tgz#37827a0ba772d072a843c3615b0ad38bcdb354eb"
+  version "5.2.2"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-5.2.2.tgz#dffef14866b8e8dc9133582514d1befaf96e980f"
   dependencies:
     async-limiter "~1.0.0"
 
