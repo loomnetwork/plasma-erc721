@@ -23,8 +23,8 @@ type TContract struct {
 	transactOpts  *bind.TransactOpts
 }
 
-func (d *TContract) Deposit(tokenID int64) (common.Hash, error) {
-	tx, err := d.tokenContract.DepositToPlasma(d.transactOpts, big.NewInt(int64(tokenID)))
+func (d *TContract) Deposit(tokenID *big.Int) (common.Hash, error) {
+	tx, err := d.tokenContract.DepositToPlasma(d.transactOpts, tokenID)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -36,12 +36,12 @@ func (d *TContract) Register() error {
 	return err
 }
 
-func (d *TContract) BalanceOf() (int64, error) {
+func (d *TContract) BalanceOf() (*big.Int, error) {
 	bal, err := d.tokenContract.BalanceOf(nil, d.callerAddr)
 	if err != nil {
-		return 0, err
+		return big.NewInt(0), err
 	}
-	return bal.Int64(), nil
+	return bal, nil
 }
 
 func (d *TContract) Account() (*plasma_cash.Account, error) {

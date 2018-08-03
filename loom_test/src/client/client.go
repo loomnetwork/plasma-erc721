@@ -33,7 +33,7 @@ func (c *Client) Register() {
 }
 
 // Deposit happens by a use calling the erc721 token contract
-func (c *Client) Deposit(tokenID int64) common.Hash {
+func (c *Client) Deposit(tokenID *big.Int) common.Hash {
 	txHash, err := c.TokenContract.Deposit(tokenID)
 	if err != nil {
 		panic(err)
@@ -64,16 +64,16 @@ func (c *Client) DebugForwardDepositEvents(startBlockNum, endBlockNum uint64) {
 
 // Plasma Functions
 
-func Transaction(slot uint64, prevTxBlkNum int64, domination uint32, address string) plasma_cash.Tx {
+func Transaction(slot uint64, prevTxBlkNum *big.Int, denomination *big.Int, address string) plasma_cash.Tx {
 	return &plasma_cash.LoomTx{
 		Slot:         slot,
-		PrevBlock:    big.NewInt(prevTxBlkNum),
-		Denomination: domination,
+		PrevBlock:    prevTxBlkNum,
+		Denomination: denomination,
 		Owner:        common.HexToAddress(address), //TODO: 0x?
 	}
 }
 
-func (c *Client) StartExit(slot uint64, prevTxBlkNum int64, txBlkNum int64) ([]byte, error) {
+func (c *Client) StartExit(slot uint64, prevTxBlkNum *big.Int, txBlkNum *big.Int) ([]byte, error) {
 	// As a user, you declare that you want to exit a coin at slot `slot`
 	//at the state which happened at block `txBlkNum` and you also need to
 	// reference a previous block
@@ -87,14 +87,16 @@ func (c *Client) StartExit(slot uint64, prevTxBlkNum int64, txBlkNum int64) ([]b
 		return nil, err
 	}
 
-	if txBlkNum%c.childBlockInterval != 0 {
+	blkModInterval := new(big.Int)
+	blkModInterval = blkModInterval.Mod(txBlkNum, big.NewInt(c.childBlockInterval))
+	if blkModInterval.Cmp(big.NewInt(0)) != 0 {
 		// In case the sender is exiting a Deposit transaction, they should
 		// just create a signed transaction to themselves. There is no need
 		// for a merkle proof.
 		fmt.Printf("exiting deposit transaction\n")
 
 		// prev_block = 0 , denomination = 1
-		exitingTx := Transaction(slot, 0, 1, account.Address)
+		exitingTx := Transaction(slot, big.NewInt(0), big.NewInt(1), account.Address)
 		exitingTxSig, err := exitingTx.Sign(account.PrivateKey)
 		if err != nil {
 			return nil, err
@@ -105,7 +107,7 @@ func (c *Client) StartExit(slot uint64, prevTxBlkNum int64, txBlkNum int64) ([]b
 			nil, exitingTx,
 			nil, nil, //proofs?
 			exitingTxSig,
-			0, txBlkNum)
+			big.NewInt(0), txBlkNum)
 		if err != nil {
 			return nil, err
 		}
@@ -132,16 +134,18 @@ func (c *Client) StartExit(slot uint64, prevTxBlkNum int64, txBlkNum int64) ([]b
 		prevTxBlkNum, txBlkNum)
 }
 
-func (c *Client) ChallengeBefore(slot uint64, prevTxBlkNum int64, txBlkNum int64) ([]byte, error) {
+func (c *Client) ChallengeBefore(slot uint64, prevTxBlkNum *big.Int, txBlkNum *big.Int) ([]byte, error) {
 	account, err := c.TokenContract.Account()
 	if err != nil {
 		return nil, err
 	}
 
-	if txBlkNum%c.childBlockInterval != 0 {
+	blkModInterval := new(big.Int)
+	blkModInterval = blkModInterval.Mod(txBlkNum, big.NewInt(c.childBlockInterval))
+	if blkModInterval.Cmp(big.NewInt(0)) != 0 {
 		// If the client is challenging an exit with a deposit they can create a signed transaction themselves.
 		// There is no need for a merkle proof.
-		exitingTx := Transaction(slot, 0, 1, account.Address)
+		exitingTx := Transaction(slot, big.NewInt(0), big.NewInt(1), account.Address)
 		exitingTxSig, err := exitingTx.Sign(account.PrivateKey)
 		if err != nil {
 			return nil, err
@@ -152,7 +156,7 @@ func (c *Client) ChallengeBefore(slot uint64, prevTxBlkNum int64, txBlkNum int64
 			nil, exitingTx,
 			nil, nil,
 			exitingTxSig,
-			0, txBlkNum)
+			big.NewInt(0), txBlkNum)
 		if err != nil {
 			return nil, err
 		}
@@ -188,7 +192,7 @@ func (c *Client) ChallengeBefore(slot uint64, prevTxBlkNum int64, txBlkNum int64
 
 // RespondChallengeBefore - Respond to an exit with invalid history challenge by proving that
 // you were given the coin under question
-func (c *Client) RespondChallengeBefore(slot uint64, respondingBlockNumber int64, challengingTxHash [32]byte) ([]byte, error) {
+func (c *Client) RespondChallengeBefore(slot uint64, respondingBlockNumber *big.Int, challengingTxHash [32]byte) ([]byte, error) {
 	respondingTx, proof, err := c.getTxAndProof(respondingBlockNumber,
 		slot)
 	if err != nil {
@@ -206,7 +210,7 @@ func (c *Client) RespondChallengeBefore(slot uint64, respondingBlockNumber int64
 
 // ChallengeBetween - `Double Spend Challenge`: Challenge a double spend of a coin
 // with a spend between the exit's blocks
-func (c *Client) ChallengeBetween(slot uint64, challengingBlockNumber int64) ([]byte, error) {
+func (c *Client) ChallengeBetween(slot uint64, challengingBlockNumber *big.Int) ([]byte, error) {
 	challengingTx, proof, err := c.getTxAndProof(challengingBlockNumber, slot)
 	if err != nil {
 		return nil, err
@@ -224,7 +228,7 @@ func (c *Client) ChallengeBetween(slot uint64, challengingBlockNumber int64) ([]
 
 // ChallengeAfter - `Exit Spent Coin Challenge`: Challenge an exit with a spend
 // after the exit's blocks
-func (c *Client) ChallengeAfter(slot uint64, challengingBlockNumber int64) ([]byte, error) { //
+func (c *Client) ChallengeAfter(slot uint64, challengingBlockNumber *big.Int) ([]byte, error) { //
 	fmt.Printf("Challenege after getting block-%d - slot %d\n", challengingBlockNumber, slot)
 	challengingTx, proof, err := c.getTxAndProof(challengingBlockNumber,
 		slot)
@@ -279,17 +283,17 @@ func (c *Client) SubmitBlock() error {
 
 	var root [32]byte
 	copy(root[:], block.MerkleHash())
-	return c.RootChain.SubmitBlock(big.NewInt(blockNum), root)
+	return c.RootChain.SubmitBlock(blockNum, root)
 }
 
-func (c *Client) SendTransaction(slot uint64, prevBlock int64, denomination int64, newOwner string) error {
+func (c *Client) SendTransaction(slot uint64, prevBlock *big.Int, denomination *big.Int, newOwner string) error {
 	ethAddress := common.HexToAddress(newOwner)
 
 	tx := &plasma_cash.LoomTx{
 		Slot:         slot,
-		Denomination: uint32(denomination),
+		Denomination: denomination,
 		Owner:        ethAddress,
-		PrevBlock:    big.NewInt(prevBlock),
+		PrevBlock:    prevBlock,
 	}
 
 	account, err := c.TokenContract.Account()
@@ -305,7 +309,7 @@ func (c *Client) SendTransaction(slot uint64, prevBlock int64, denomination int6
 	return c.childChain.SendTransaction(slot, prevBlock, denomination, newOwner, account.Address, sig)
 }
 
-func (c *Client) getTxAndProof(blkHeight int64, slot uint64) (plasma_cash.Tx, []byte, error) {
+func (c *Client) getTxAndProof(blkHeight *big.Int, slot uint64) (plasma_cash.Tx, []byte, error) {
 	block, err := c.childChain.Block(blkHeight)
 	if err != nil {
 		return nil, nil, err
@@ -336,11 +340,11 @@ func (c *Client) StopWatchingExits(slot uint64) error {
 	panic("TODO")
 }
 
-func (c *Client) GetBlockNumber() (int64, error) {
+func (c *Client) GetBlockNumber() (*big.Int, error) {
 	return c.childChain.BlockNumber()
 }
 
-func (c *Client) GetBlock(blkHeight int64) (plasma_cash.Block, error) {
+func (c *Client) GetBlock(blkHeight *big.Int) (plasma_cash.Block, error) {
 	return c.childChain.Block(blkHeight)
 }
 
