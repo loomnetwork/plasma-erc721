@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"math/big"
 	"time"
 )
 
@@ -44,19 +45,19 @@ func main() {
 	aliceTokensStart, err := alice.TokenContract.BalanceOf()
 	log.Printf("Alice has %d tokens\n", aliceTokensStart)
 
-	if aliceTokensStart != 5 {
+	if notEquals(aliceTokensStart, 5) {
 		log.Fatalf("START: Alice has incorrect number of tokens")
 	}
 	bobTokensStart, err := bob.TokenContract.BalanceOf()
 	exitIfError(err)
 	log.Printf("Bob has %d tokens\n", bobTokensStart)
-	if bobTokensStart != 0 {
+	if notEquals(bobTokensStart, 0) {
 		log.Fatalf("START: Bob has incorrect number of tokens")
 	}
 	charlieTokensStart, err := charlie.TokenContract.BalanceOf()
 	exitIfError(err)
 	log.Printf("Charlie has %d tokens\n", charlieTokensStart)
-	if charlieTokensStart != 0 {
+	if notEquals(charlieTokensStart, 0) {
 		log.Fatalf("START: Charlie has incorrect number of tokens")
 	}
 
@@ -69,7 +70,7 @@ func main() {
 
 	// Alice deposits 3 of her coins to the plasma contract and gets 3 plasma nft
 	// utxos in return
-	tokenID := int64(1)
+	tokenID := big.NewInt(1)
 	txHash := alice.Deposit(tokenID)
 	time.Sleep(1 * time.Second)
 	deposit1, err := alice.RootChain.DepositEventData(txHash)
@@ -77,14 +78,14 @@ func main() {
 	slots = append(slots, deposit1.Slot)
 	alice.DebugCoinMetaData(slots)
 
-	txHash = alice.Deposit(tokenID + 1)
+	txHash = alice.Deposit(tokenID.Add(tokenID, big.NewInt(1)))
 	time.Sleep(1 * time.Second)
 	deposit2, err := alice.RootChain.DepositEventData(txHash)
 	exitIfError(err)
 	slots = append(slots, deposit2.Slot)
 	alice.DebugCoinMetaData(slots)
 
-	txHash = alice.Deposit(tokenID + 2)
+	txHash = alice.Deposit(tokenID.Add(tokenID, big.NewInt(2)))
 	time.Sleep(1 * time.Second)
 	deposit3, err := alice.RootChain.DepositEventData(txHash)
 	exitIfError(err)
@@ -97,11 +98,11 @@ func main() {
 	// transaction
 	account, err := bob.TokenContract.Account()
 	exitIfError(err)
-	err = alice.SendTransaction(deposit3.Slot, deposit3.BlockNum.Int64(), 1, account.Address) //aliceToBob
+	err = alice.SendTransaction(deposit3.Slot, deposit3.BlockNum, big.NewInt(1), account.Address) //aliceToBob
 	exitIfError(err)
 	account, err = charlie.TokenContract.Account()
 	exitIfError(err)
-	err = alice.SendTransaction(deposit2.Slot, deposit2.BlockNum.Int64(), 1, account.Address) //randomTx
+	err = alice.SendTransaction(deposit2.Slot, deposit2.BlockNum, big.NewInt(1), account.Address) //randomTx
 	exitIfError(err)
 	exitIfError(authority.SubmitBlock())
 	plasmaBlock1, err := authority.GetBlockNumber()
@@ -114,7 +115,7 @@ func main() {
 	blkNum := plasmaBlock1
 	account, err = charlie.TokenContract.Account() // the prev transaction was included in block 1000
 	exitIfError(err)
-	err = bob.SendTransaction(deposit3.Slot, blkNum, 1, account.Address) //bobToCharlie
+	err = bob.SendTransaction(deposit3.Slot, blkNum, big.NewInt(1), account.Address) //bobToCharlie
 	exitIfError(err)
 
 	// TODO: verify coin history
@@ -147,20 +148,20 @@ func main() {
 	aliceTokensEnd, err := alice.TokenContract.BalanceOf()
 	exitIfError(err)
 	log.Printf("Alice has %d tokens\n", aliceTokensEnd)
-	if aliceTokensEnd != 2 {
+	if notEquals(aliceTokensEnd, 2) {
 		log.Fatal("END: Alice has incorrect number of tokens")
 	}
 
 	bobTokensEnd, err := bob.TokenContract.BalanceOf()
 	exitIfError(err)
 	log.Printf("Bob has %d tokens\n", bobTokensEnd)
-	if bobTokensEnd != 0 {
+	if notEquals(bobTokensEnd, 0) {
 		log.Fatal("END: Bob has incorrect number of tokens")
 	}
 	charlieTokensEnd, err := charlie.TokenContract.BalanceOf()
 	exitIfError(err)
 	log.Printf("Charlie has %d  tokens\n", charlieTokensEnd)
-	if charlieTokensEnd != 1 {
+	if notEquals(charlieTokensEnd, 1) {
 		log.Fatal("END: Charlie has incorrect number of tokens")
 	}
 
@@ -172,5 +173,13 @@ func main() {
 func exitIfError(err error) {
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func notEquals(x *big.Int, y int64) bool {
+	if x.Cmp(big.NewInt(y)) != 0 {
+		return true
+	} else {
+		return false
 	}
 }

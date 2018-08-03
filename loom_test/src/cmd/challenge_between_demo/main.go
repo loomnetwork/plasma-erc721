@@ -4,6 +4,7 @@ import (
 	"client"
 	"context"
 	"fmt"
+    "math/big"
 	"log"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -39,7 +40,7 @@ func main() {
 	exitIfError(err)
 
 	// Eve deposits a coin
-	txHash := eve.Deposit(11)
+	txHash := eve.Deposit(big.NewInt(11))
 	deposit1, err := eve.RootChain.DepositEventData(txHash)
 	exitIfError(err)
 
@@ -48,7 +49,7 @@ func main() {
 	// Eve sends her plasma coin to Bob
 	coin, err := eve.PlasmaCoin(deposit1.Slot)
 	exitIfError(err)
-	err = eve.SendTransaction(deposit1.Slot, coin.DepositBlockNum, 1, bobAccount.Address)
+	err = eve.SendTransaction(deposit1.Slot, coin.DepositBlockNum, big.NewInt(1), bobAccount.Address)
 	exitIfError(err)
 
 	err = authority.SubmitBlock()
@@ -59,7 +60,7 @@ func main() {
 	// TODO: bob.WatchExits(deposit1.Slot)
 
 	// Eve sends this same plasma coin to Alice
-	err = eve.SendTransaction(deposit1.Slot, coin.DepositBlockNum, 1, aliceAccount.Address)
+	err = eve.SendTransaction(deposit1.Slot, coin.DepositBlockNum, big.NewInt(1), aliceAccount.Address)
 	exitIfError(err)
 
 	err = authority.SubmitBlock()
@@ -112,7 +113,7 @@ func main() {
 	exitIfError(err)
 
 	fmt.Printf("Bob has %d tokens", bobTokensEnd)
-	if !(bobTokensEnd == bobTokensStart+1) {
+	if bobTokensEnd.Cmp(bobTokensStart.Add(bobTokensStart, big.NewInt(1))) != 0 {
 		log.Fatal("END: Bob has incorrect number of tokens")
 	}
 

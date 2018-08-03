@@ -4,6 +4,7 @@ import (
 	"client"
 	"context"
 	"fmt"
+    "math/big"
 	"log"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -35,7 +36,7 @@ func main() {
 	exitIfError(err)
 
 	// Trudy deposits a coin
-	txHash := trudy.Deposit(21)
+	txHash := trudy.Deposit(big.NewInt(21))
 	depEvent, err := trudy.RootChain.DepositEventData(txHash)
 	exitIfError(err)
 	depositSlot1 := depEvent.Slot
@@ -54,7 +55,7 @@ func main() {
 	// TODO: Trudy should start watching for exits of depositSlot1
 
 	// Trudy sends her coin to Dan
-	exitIfError(trudy.SendTransaction(depositSlot1, coin.DepositBlockNum, 1, danAccount.Address))
+	exitIfError(trudy.SendTransaction(depositSlot1, coin.DepositBlockNum, big.NewInt(1), danAccount.Address))
 	exitIfError(authority.SubmitBlock())
 	trudyToDanBlockNum, err := authority.GetBlockNumber()
 	exitIfError(err)
@@ -64,7 +65,7 @@ func main() {
 	coin, err = dan.RootChain.PlasmaCoin(depositSlot1)
 	exitIfError(err)
 	fmt.Println("Dan attempts to exit...")
-	_, err = dan.StartExit(depositSlot1, 0, coin.DepositBlockNum)
+	_, err = dan.StartExit(depositSlot1, big.NewInt(0), coin.DepositBlockNum)
 	exitIfError(err)
 	exitIfError(authority.SubmitBlock())
 
@@ -72,7 +73,7 @@ func main() {
 	// TODO: Dan should start watching for challenges of depositSlot1
 
 	fmt.Println("Trudy attempts to challenge Dan's exit...")
-	challengeTxHash, err := trudy.ChallengeBefore(depositSlot1, 0, coin.DepositBlockNum)
+	challengeTxHash, err := trudy.ChallengeBefore(depositSlot1, big.NewInt(0), coin.DepositBlockNum)
 	exitIfError(err)
 
 	challengedExitEvent, err := trudy.RootChain.ChallengedExitEventData(common.BytesToHash(challengeTxHash))
@@ -108,7 +109,7 @@ func main() {
 	danTokensEnd, err := dan.TokenContract.BalanceOf()
 	exitIfError(err)
 	log.Printf("Dan has %v tokens", danTokensEnd)
-	if danTokensEnd != (danTokenStart + 1) {
+	if danTokensEnd.Cmp(danTokenStart.Add(danTokenStart, big.NewInt(1))) != 0 {
 		log.Fatal("END: Dan has incorrect number of tokens")
 	}
 

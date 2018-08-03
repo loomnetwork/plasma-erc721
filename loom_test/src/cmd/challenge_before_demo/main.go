@@ -4,6 +4,7 @@ import (
 	"client"
 	"context"
 	"fmt"
+    "math/big"
 	"log"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -40,7 +41,7 @@ func main() {
 	exitIfError(err)
 
 	// Dan deposits a coin
-	txHash := dan.Deposit(16)
+	txHash := dan.Deposit(big.NewInt(16))
 	depEvent, err := mallory.RootChain.DepositEventData(txHash)
 	exitIfError(err)
 	depositSlot1 := depEvent.Slot
@@ -59,13 +60,13 @@ func main() {
 	// TODO: Dan should start watching for exits of depositSlot1
 
 	// Trudy sends her invalid coin (which she doesn't own) to Mallory
-	exitIfError(trudy.SendTransaction(depositSlot1, coin.DepositBlockNum, 1, malloryAccount.Address))
+	exitIfError(trudy.SendTransaction(depositSlot1, coin.DepositBlockNum, big.NewInt(1), malloryAccount.Address))
 	exitIfError(authority.SubmitBlock())
 	trudyToMalloryBlockNum, err := authority.GetBlockNumber()
 	exitIfError(err)
 
 	// Mallory sends the invalid coin back to Trudy
-	exitIfError(mallory.SendTransaction(depositSlot1, trudyToMalloryBlockNum, 1, trudyAccount.Address))
+	exitIfError(mallory.SendTransaction(depositSlot1, trudyToMalloryBlockNum, big.NewInt(1), trudyAccount.Address))
 	exitIfError(authority.SubmitBlock())
 	malloryToTrudyBlockNum, err := authority.GetBlockNumber()
 	exitIfError(err)
@@ -78,7 +79,7 @@ func main() {
 	fmt.Println("Dan attempts to challenge...")
 	// Dan challenges Trudy's exit (in practice this will be done automatically by Dan's client
 	// (once watching is implemented)
-	_, err = dan.ChallengeBefore(depositSlot1, 0, coin.DepositBlockNum)
+	_, err = dan.ChallengeBefore(depositSlot1, big.NewInt(0), coin.DepositBlockNum)
 	exitIfError(err)
 
 	// Let 8 days pass without any response to the challenge
@@ -90,7 +91,7 @@ func main() {
 
 	fmt.Println("Dan attempts to exit...")
 	// Having successfully challenged Trudy's exit Dan should be able to exit the coin
-	_, err = dan.StartExit(depositSlot1, 0, coin.DepositBlockNum)
+	_, err = dan.StartExit(depositSlot1, big.NewInt(0), coin.DepositBlockNum)
 	exitIfError(err)
 
 	// TODO: Dan should stop watching exits of depositSlot1
@@ -116,7 +117,7 @@ func main() {
 	danTokensEnd, err := dan.TokenContract.BalanceOf()
 	exitIfError(err)
 	log.Printf("Dan has %v tokens", danTokensEnd)
-	if danTokensEnd != (danTokenStart + 1) {
+	if danTokensEnd.Cmp(danTokenStart.Add(danTokenStart, big.NewInt(1))) != 0 {
 		log.Fatal("END: Dan has incorrect number of tokens")
 	}
 
