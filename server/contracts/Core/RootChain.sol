@@ -31,8 +31,10 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
      *                    is included
      * @param denomination Quantity of a particular coin deposited
      * @param from The address of the depositor
+     * @param contractAddress The address of the contract making the deposit
      */
-    event Deposit(uint64 indexed slot, uint256 blockNumber, uint256 denomination, address indexed from);
+    event Deposit(uint64 indexed slot, uint256 blockNumber, uint256 denomination, 
+                  address indexed from, address indexed contractAddress);
 
     /**
      * Event for block submission logging
@@ -44,13 +46,13 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
      */
     event SubmittedBlock(uint256 blockNumber, bytes32 root, uint256 timestamp);
 
-
     /**
      * Event for logging exit starts
      * @param slot The slot of the coin being exited
      * @param owner The user who claims to own the coin being exited
      */
     event StartedExit(uint64 indexed slot, address indexed owner);
+
     /**
      * Event for exit challenge logging
      * @notice This event only fires if `challengeBefore` is called. Other
@@ -60,6 +62,7 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
      * @param txHash The hash of the tx used for the challenge
      */
     event ChallengedExit(uint64 indexed slot, bytes32 txHash);
+
     /**
      * Event for exit response logging
      * @notice This only logs responses to `challengeBefore`, other challenges
@@ -67,6 +70,7 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
      * @param slot The slot of the coin whose challenge was responded to
      */
     event RespondedExitChallenge(uint64 indexed slot);
+
     /**
      * Event for exit finalization logging
      * @param slot The slot of the coin whose exit has been finalized
@@ -80,6 +84,7 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
      * @param amount The bond amount which can now be withdrawn
      */
     event FreedBond(address indexed from, uint256 amount);
+
     /**
      * Event to log the slashing of a bond
      * @param from The address of the user whose bonds have been slashed
@@ -87,6 +92,7 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
      * @param amount The bound amount which has been forfeited
      */
     event SlashedBond(address indexed from, address indexed to, uint256 amount);
+
     /**
      * Event to log the withdrawal of a bond
      * @param from The address of the user who withdrew bonds
@@ -442,7 +448,7 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
         uint256 uid = coins[slot].uid;
         uint256 denomination = coins[slot].denomination;
 
-		// Delete the coin that is being withdrawn
+        // Delete the coin that is being withdrawn
         Coin memory c = coins[slot];
         delete coins[slot];
         if (c.mode == Mode.ETH) {
@@ -462,7 +468,7 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
             uid,
             denomination
         );
-}
+    }
 
     /******************** CHALLENGES ********************/
 
