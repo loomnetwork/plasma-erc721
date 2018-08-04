@@ -419,10 +419,15 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
 
     function checkPendingChallenges(uint64 slot) private returns (bool hasChallenges) {
         uint256 length = challenges[slot].length;
+        bool slashed;
         for (uint i = 0; i < length; i++) {
             if (challenges[slot][i].txHash != 0x0) {
-                // Penalize the exitor. Also free the bond of the challenger.
-                slashBond(coins[slot].exit.owner, challenges[slot][i].challenger);
+                // Penalize the exitor and reward the first valid challenger. 
+                if (!slashed) {
+                    slashBond(coins[slot].exit.owner, challenges[slot][i].challenger);
+                    slashed = true;
+                }
+                // Also free the bond of the challenger.
                 freeBond(challenges[slot][i].challenger);
 
                 // Challenge resolved, delete it

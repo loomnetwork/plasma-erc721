@@ -723,6 +723,118 @@ contract("Plasma ERC721 - Invalid History Challenge / `challengeBefore`", async 
                 assert.equal(fred_bond.amount, web3.toWei(0.1, 'ether'));
             });
 
+            it("2 challenges resolved at finalization", async function() {
+                let UTXO = {'slot': events[2]['args'].slot, 'block': events[2]['args'].blockNumber.toNumber()};
+
+                // Bob/Operator forges a transaction and gives the coin all the way to Elliot
+                // Elliot exits, Bob challenges,
+                // The authority submits a block, but there is no transaction from Alice to Bob
+                let tree_bob = await txlib.submitTransactions(authority, plasma);
+
+                // Nevertheless, Bob pretends he received the coin, and by
+                // colluding with the chain operator he is able to include his
+                // invalid transaction in a block.
+                let bob_to_charlie = txlib.createUTXO(UTXO.slot, 1000, bob, charlie);
+                let txs = [bob_to_charlie.leaf]
+                let tree_charlie = await txlib.submitTransactions(authority, plasma, txs);
+
+                // Charlie having received the coin, gives it to Dylan.
+                let charlie_to_dylan = txlib.createUTXO(UTXO.slot, 2000, charlie, dylan);
+                txs = [charlie_to_dylan.leaf]
+                let tree_dylan = await txlib.submitTransactions(authority, plasma, txs);
+
+                // Dylan having received the coin, gives it to Elliot.
+                let dylan_to_elliot = txlib.createUTXO(UTXO.slot, 3000, dylan, elliot);
+                txs = [dylan_to_elliot.leaf]
+                let tree_elliot = await txlib.submitTransactions(authority, plasma, txs);
+                //
+                // Dylan having received the coin, gives it to Elliot.
+                let elliot_to_fred = txlib.createUTXO(UTXO.slot, 4000, elliot, fred);
+                txs = [elliot_to_fred.leaf]
+                let tree_fred = await txlib.submitTransactions(authority, plasma, txs);
+
+                // Elliot normally should be always checking the coin's history and
+                // not accepting the payment if it's invalid like in this case, but
+                // it is considered that they are all colluding together to steal
+                // Bob's coin.  Elliot has all the info required to submit
+                // an exit, even if one of the transactions in the coin's history
+                // were invalid.
+                let sig = elliot_to_fred.sig;
+                let prev_tx_proof = tree_elliot.createMerkleProof(UTXO.slot)
+                let exiting_tx_proof = tree_fred.createMerkleProof(UTXO.slot)
+                let prev_tx = dylan_to_elliot.tx;
+                let exiting_tx = elliot_to_fred.tx;
+
+                // Fred submits the exit which is valid as far as the chain is concerned
+                await plasma.startExit(
+                    UTXO.slot,
+                    prev_tx, exiting_tx,
+                    prev_tx_proof, exiting_tx_proof,
+                    sig,
+                    [4000, 5000],
+                    {'from': fred, 'value': web3.toWei(0.1, 'ether')}
+                );
+                t0 = (await web3.eth.getBlock('latest')).timestamp;
+
+                // Dylan challenges the exit
+                sig = charlie_to_dylan.sig;
+                let tx_proof = tree_dylan.createMerkleProof(UTXO.slot)
+                prev_tx_proof = tree_charlie.createMerkleProof(UTXO.slot)
+                prev_tx = bob_to_charlie.tx;
+                let tx = charlie_to_dylan.tx;
+                await plasma.challengeBefore(
+                    UTXO.slot,
+                    prev_tx , tx,
+                    prev_tx_proof, tx_proof,
+                    sig,
+                    [2000, 3000],
+                    {'from': dylan, 'value': web3.toWei(0.1, 'ether')}
+                );
+
+                // No more challenges can be issued
+                // await increaseTimeTo(t0 + RESPONSE_PERIOD + e);
+                // Alice can no longer challenge the exit! :(
+                let alice_to_alice = txlib.createUTXO(UTXO.slot, 0, alice, alice);
+                await plasma.challengeBefore(
+                    UTXO.slot,
+                    '0x0' , alice_to_alice.tx,
+                    '0x0', '0x0',
+                    alice_to_alice.sig,
+                    [0, UTXO.block],
+                    {'from': alice, 'value': web3.toWei(0.1, 'ether')}
+                );
+
+                await increaseTimeTo(t0 + MATURITY_PERIOD + e);
+                await plasma.finalizeExits({from: random_guy2});
+
+                // Fred withdraws the coin.
+                assertRevert(plasma.withdraw(UTXO.slot, {from : fred}));
+
+                assert.equal(await cards.balanceOf.call(alice), 2);
+                assert.equal(await cards.balanceOf.call(bob), 0);
+                assert.equal(await cards.balanceOf.call(charlie), 0);
+                assert.equal(await cards.balanceOf.call(dylan), 0);
+                assert.equal(await cards.balanceOf.call(elliot), 0);
+                assert.equal(await cards.balanceOf.call(fred), 0);
+                assert.equal(await cards.balanceOf.call(plasma.address), 3);
+
+                // Bond withdrawals
+                await plasma.withdrawBonds({from: dylan});
+                await plasma.withdrawBonds({from: alice});
+
+                let withdrewBonds = plasma.WithdrewBonds({}, {fromBlock: 0, toBlock: 'latest'});
+                let eventLog = await txlib.Promisify(cb => withdrewBonds.get(cb));
+
+                // Dylan's challenge was first (even if it was invalid! and this is what ultimately caused the exit to be cancelled, so he gets both his bond back and the challenger's bond back.
+                let dylan_bond = eventLog[0].args;
+                assert.equal(dylan_bond.from, dylan);
+                assert.equal(dylan_bond.amount, web3.toWei(0.2, 'ether'));
+
+                // Alice gets her own bond back
+                let alice_bond = eventLog[1].args;
+                assert.equal(alice_bond.from, alice);
+                assert.equal(alice_bond.amount, web3.toWei(0.1, 'ether'));
+            });
         });
 
     });
