@@ -14,7 +14,9 @@ class Contract(object):
         w3 = getWeb3(endpoint)
         with open(abi_file) as f:
             abi = json.load(f)['abi']
-        contract = w3.eth.contract(abi=abi, address=address)
+        contract = w3.eth.contract(
+            abi=abi, address=w3.toChecksumAddress(address)
+        )
         self.w3 = w3
 
         if keystore is not None:

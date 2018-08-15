@@ -2,9 +2,7 @@ Flask==1.0.2
 requests==2.18.4
 rlp==0.6.0
 ethereum==2.3.1
-
-# web3 fork
--e git+https://github.com/gakonst/web3.py#egg=web3
+web3==4.5.0
 
 # linting
 flake8==3.5.0
