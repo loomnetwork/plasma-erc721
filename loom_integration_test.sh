@@ -6,7 +6,7 @@
 set -exo pipefail
 
 # Loom build to use for tests when running on Jenkins, this build will be automatically downloaded.
-BUILD_NUMBER=343
+BUILD_NUMBER=377
 
 # These can be toggled via the options below, only useful when running the script locally.
 LOOM_INIT_ONLY=false
