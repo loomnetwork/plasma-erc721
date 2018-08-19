@@ -8,6 +8,7 @@ contract ValidatorManagerContract is Ownable {
     mapping (address => bool) public validators;
     mapping (address => bool) public allowedTokens;
 
+    /// @param The address to check if the owner is calling it
     function checkValidator(address _address) public view returns (bool) {
         // owner is a permanent validator
         if (_address == owner)
