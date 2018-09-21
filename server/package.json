@@ -10,6 +10,8 @@
     "babel-polyfill": "^6.26.0",
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-stage-2": "^6.24.1",
+    "babel-register": "^6.26.0",
+    "chai": "^4.1.2",
     "eth-gas-reporter": "^0.1.9",
     "ganache-cli": "^6.1.7",
     "growl": "^1.10.5",
@@ -21,7 +23,6 @@
     "truffle-privatekey-provider": "0.0.5",
     "web3-utils": "^1.0.0-beta.34"
   },
-  "devDependencies": {},
   "scripts": {
     "console": "truffle console --network rpc",
     "compile": "truffle compile",
