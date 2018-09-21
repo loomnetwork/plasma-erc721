@@ -28,6 +28,18 @@ On OSX + Homebrew (may need this)
 source /usr/local/bin/virtualenvwrapper.sh
 ```
 
+Or if run into issues regarding the `openssl` like:
+```
+'openssl/aes.h' file not found
+```
+Should export some path to `openssl` libraries as following:
+```
+export LDFLAGS="-L/usr/local/opt/openssl/lib"
+export CPPFLAGS="-I/usr/local/opt/openssl/include"
+```
+
+> Note: Also on OSX it may require `brew upgrade openssl`
+
 2. In server folder follow the [README.md](server/README.md)
 
 ```
