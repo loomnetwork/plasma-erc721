@@ -6,7 +6,7 @@
 set -exo pipefail
 
 # Loom build to use for tests when running on Jenkins, this build will be automatically downloaded.
-BUILD_NUMBER=450
+BUILD_NUMBER=458
 
 # These can be toggled via the options below, only useful when running the script locally.
 LOOM_INIT_ONLY=false
@@ -34,6 +34,7 @@ function start_chains {
     echo 'Launched ganache' $ganache_pid
 
     if [[ "$DEBUG_LOOM" == false ]]; then
+        pkill -9 hostileoperator || true
         cd $LOOM_DIR
         $LOOM_BIN run > loom.log 2>&1 &  
         loom_pid=$!
