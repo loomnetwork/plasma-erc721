@@ -11,9 +11,12 @@ npm run test
 
 # build the Go tester and run the unit tests
 cd $REPO_ROOT/loom_test
-export GOPATH=/tmp/gopath-$BUILD_TAG:`pwd`
+# we need to put this other gopath to get the go-ethereum the correct version
+# TODO switch this go deps
+export GOPATH=/tmp/gopath-$BUILD_TAG
 make clean
 make deps
+export GOPATH=/tmp/gopath-$BUILD_TAG:`pwd`
 make demos
 make contracts
 make test

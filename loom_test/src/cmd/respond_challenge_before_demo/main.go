@@ -4,8 +4,9 @@ import (
 	"client"
 	"context"
 	"fmt"
-    "math/big"
 	"log"
+	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -72,6 +73,7 @@ func main() {
 	// TODO: Dan should start watching for exits of depositSlot1
 	// TODO: Dan should start watching for challenges of depositSlot1
 
+	time.Sleep(4 * time.Second)
 	fmt.Println("Trudy attempts to challenge Dan's exit...")
 	challengeTxHash, err := trudy.ChallengeBefore(depositSlot1, big.NewInt(0), coin.DepositBlockNum)
 	exitIfError(err)
