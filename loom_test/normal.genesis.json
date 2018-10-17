@@ -1,0 +1,37 @@
+{
+    "contracts": [
+        {
+            "vm": "plugin",
+            "format": "plugin",
+            "name": "coin",
+            "location": "coin:1.0.0",
+            "init": null
+        },
+        {
+            "vm": "plugin",
+            "format": "plugin",
+            "name": "dpos",
+            "location": "dpos:1.0.0",
+            "init": {
+                "params": {
+                    "witnessCount": "21",
+                    "electionCycleLength": "604800",
+                    "minPowerFraction": "5"
+                },
+                "validators": [
+                    {
+                        "pubKey": "cU3bPuzFWsI1N3I9p7iGJUJoCMoJIu9si3MA2I68pfg=",
+                        "power": "10"
+                    }
+                ]
+            }
+        },
+        {
+            "vm": "plugin",
+            "format": "plugin",
+            "name": "plasmacash",
+            "location": "plasmacash:1.0.0",
+            "init": null
+        }
+    ]
+}
