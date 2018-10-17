@@ -61,10 +61,12 @@ function init_honest_dappchain {
     cd $LOOM_DIR
     rm -rf app.db
     rm -rf chaindata
+    rm -rf contracts
     cp $REPO_ROOT/loom_test/loom-test.yml $LOOM_DIR/loom.yml    
     cp $REPO_ROOT/loom_test/eth.key $LOOM_DIR/eth.key
     cp $REPO_ROOT/loom_test/test.key $LOOM_DIR/test.key
     cp $REPO_ROOT/loom_test/oracle.key $LOOM_DIR/oracle.key
+    cp $REPO_ROOT/loom_test/normal.genesis.json $LOOM_DIR/genesis.json
     $LOOM_BIN init -f
     echo 'Loom DAppChain initialized in ' $LOOM_DIR
 }
@@ -138,31 +140,31 @@ fi
 
 trap cleanup EXIT
 
-# start_chains
-# 
-# # Run first set of Go tests against the built-in Plasma Cash contract
-# cd $REPO_ROOT/loom_test
-# ./plasmacash_tester
-# ./plasmacash_challenge_after_tester
-# 
-# stop_chains
-# # Wait for Ganache & Loom to stop
-# sleep 10
-# 
-# # Reset the DAppChain and deploy a hostile/dumb Plasma Cash contract for the Go challenge tests
-# init_hostile_dappchain
-# start_chains
-# 
-# cd $REPO_ROOT/loom_test
-# ./plasmacash_tester -hostile
-# ./plasmacash_challenge_after_tester -hostile
-# ./plasmacash_challenge_between_tester -hostile
-# ./plasmacash_challenge_before_tester -hostile
-# ./plasmacash_respond_challenge_before_tester -hostile
-# 
-# stop_chains
-# # Wait for Ganache & Loom to stop
-# sleep 10
+start_chains
+
+# Run first set of Go tests against the built-in Plasma Cash contract
+cd $REPO_ROOT/loom_test
+./plasmacash_tester
+./plasmacash_challenge_after_tester
+
+stop_chains
+# Wait for Ganache & Loom to stop
+sleep 10
+
+# Reset the DAppChain and deploy a hostile/dumb Plasma Cash contract for the Go challenge tests
+init_hostile_dappchain
+start_chains
+
+cd $REPO_ROOT/loom_test
+./plasmacash_tester -hostile
+./plasmacash_challenge_after_tester -hostile
+./plasmacash_challenge_between_tester -hostile
+./plasmacash_challenge_before_tester -hostile
+./plasmacash_respond_challenge_before_tester -hostile
+
+stop_chains
+# Wait for Ganache & Loom to stop
+sleep 10
 # 
 # # Reset the DAppChain again for the JS tests
 init_honest_dappchain
