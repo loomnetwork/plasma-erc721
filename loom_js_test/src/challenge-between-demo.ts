@@ -54,6 +54,7 @@ export async function runChallengeBetweenDemo(t: test.Test) {
   const coin = await eve.getPlasmaCoinAsync(deposit1Slot)
   await eve.transferAsync(deposit1Slot, bob.ethAddress)
   currentBlock = await pollForBlockChange(authority, currentBlock, 20, 2000)
+  await sleep(2000) // need to wait a couple of seconds so that the onchain contract transaction gets submitted.
 
   t.equal(await bob.receiveCoinAsync(deposit1Slot), true, 'Coin history verified')
   const bobCoin = bob.watchExit(deposit1Slot, coin.depositBlockNum)
