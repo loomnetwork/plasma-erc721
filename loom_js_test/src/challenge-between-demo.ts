@@ -4,40 +4,47 @@ import BN from 'bn.js'
 import { PlasmaUser } from 'loom-js'
 
 import { increaseTime, getEthBalanceAtAddress } from './ganache-helpers'
-import { sleep, ADDRESSES, ACCOUNTS, setupContracts, pollForBlockChange } from './config'
+import {
+  sleep,
+  ADDRESSES,
+  ACCOUNTS,
+  setupContracts,
+  web3Endpoint,
+  dappchainEndpoint,
+  eventsEndpoint
+} from './config'
 
 export async function runChallengeBetweenDemo(t: test.Test) {
-  const web3Endpoint = 'ws://127.0.0.1:8545'
-  const dappchainEndpoint = 'http://localhost:46658'
-  const web3 = new Web3(new Web3.providers.WebsocketProvider(web3Endpoint))
+  const web3 = new Web3(new Web3.providers.HttpProvider(web3Endpoint))
   const { cards } = setupContracts(web3)
   const cardsAddress = ADDRESSES.token_contract
 
-  const authority = PlasmaUser.createUser(
+  const alice = await PlasmaUser.createOfflineUser(
+    ACCOUNTS.alice,
     web3Endpoint,
     ADDRESSES.root_chain,
     dappchainEndpoint,
-    ACCOUNTS.authority
-  )
-  const alice = PlasmaUser.createUser(
-    web3Endpoint,
-    ADDRESSES.root_chain,
-    dappchainEndpoint,
-    ACCOUNTS.alice
-  )
-  const bob = PlasmaUser.createUser(
-    web3Endpoint,
-    ADDRESSES.root_chain,
-    dappchainEndpoint,
-    ACCOUNTS.bob
-  )
-  const eve = PlasmaUser.createUser(
-    web3Endpoint,
-    ADDRESSES.root_chain,
-    dappchainEndpoint,
-    ACCOUNTS.eve
+    eventsEndpoint,
+    'alice_db'
   )
 
+  const bob = await PlasmaUser.createOfflineUser(
+    ACCOUNTS.bob,
+    web3Endpoint,
+    ADDRESSES.root_chain,
+    dappchainEndpoint,
+    eventsEndpoint,
+    'bob_db'
+  )
+
+  const eve = await PlasmaUser.createOfflineUser(
+    ACCOUNTS.eve,
+    web3Endpoint,
+    ADDRESSES.root_chain,
+    dappchainEndpoint,
+    eventsEndpoint,
+    'eve_db'
+  )
   const bobTokensStart = await cards.balanceOfAsync(bob.ethAddress)
 
   // Give Eve 5 tokens
@@ -52,15 +59,15 @@ export async function runChallengeBetweenDemo(t: test.Test) {
 
   // Eve sends her plasma coin to Bob
   const coin = await eve.getPlasmaCoinAsync(deposit1Slot)
-  let currentBlock = await authority.getCurrentBlockAsync()
+  let currentBlock = await eve.getCurrentBlockAsync()
   await eve.transferAndVerifyAsync(deposit1Slot, bob.ethAddress, 6)
-  currentBlock = await pollForBlockChange(authority, currentBlock, 20, 2000)
+  currentBlock = await eve.pollForBlockChange(currentBlock, 20, 2000)
 
   t.equal(await bob.receiveAndWatchCoinAsync(deposit1Slot), true, 'Coin history verified')
 
   // Eve sends this same plasma coin to Alice
   await eve.transferAndVerifyAsync(deposit1Slot, alice.ethAddress, 6)
-  currentBlock = await pollForBlockChange(authority, currentBlock, 20, 2000)
+  currentBlock = await eve.pollForBlockChange(currentBlock, 20, 2000)
 
   // Alice attempts to exit her double-spent coin
   // Low level call to exit the double spend
@@ -78,7 +85,7 @@ export async function runChallengeBetweenDemo(t: test.Test) {
   // Jump forward in time by 8 days
   await increaseTime(web3, 8 * 24 * 3600)
 
-  await authority.finalizeExitsAsync()
+  await bob.finalizeExitsAsync()
 
   await bob.withdrawAsync(deposit1Slot)
 
@@ -98,10 +105,6 @@ export async function runChallengeBetweenDemo(t: test.Test) {
     'END: Bob has correct number of tokens'
   )
 
-  // Close the websocket, hacky :/
-  // @ts-ignore
-  web3.currentProvider.connection.close()
-  authority.disconnect()
   alice.disconnect()
   bob.disconnect()
   eve.disconnect()

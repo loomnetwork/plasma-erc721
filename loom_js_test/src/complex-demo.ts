@@ -3,28 +3,39 @@ import Web3 from 'web3'
 import { PlasmaUser } from 'loom-js'
 
 import { increaseTime } from './ganache-helpers'
-import { pollForBlockChange, sleep, ADDRESSES, ACCOUNTS, setupContracts } from './config'
+import {
+  sleep,
+  ADDRESSES,
+  ACCOUNTS,
+  web3Endpoint,
+  dappchainEndpoint,
+  eventsEndpoint
+} from './config'
+
 import BN from 'bn.js'
 
 // Complex demo where we try to break the system _lol_
 // A whatever interaction between fred and greg (& harry who joins late to the party)
 // All interactions happen in ETH
 export async function complexDemo(t: test.Test) {
-  const web3Endpoint = 'ws://127.0.0.1:8545'
-  const dappchainEndpoint = 'http://localhost:46658'
-  const web3 = new Web3(new Web3.providers.WebsocketProvider(web3Endpoint))
+  const web3 = new Web3(new Web3.providers.HttpProvider(web3Endpoint))
 
-  const fred = PlasmaUser.createUser(
+  const fred = await PlasmaUser.createOfflineUser(
+    ACCOUNTS.fred,
     web3Endpoint,
     ADDRESSES.root_chain,
     dappchainEndpoint,
-    ACCOUNTS.fred
+    eventsEndpoint,
+    'fred_db'
   )
-  const greg = PlasmaUser.createUser(
+
+  const greg = await PlasmaUser.createOfflineUser(
+    ACCOUNTS.greg,
     web3Endpoint,
     ADDRESSES.root_chain,
     dappchainEndpoint,
-    ACCOUNTS.greg
+    eventsEndpoint,
+    'greg_db'
   )
 
   // Fred deposits 5000 Wei split across 3 coins
@@ -63,7 +74,7 @@ export async function complexDemo(t: test.Test) {
   let currentBlock = await fred.getCurrentBlockAsync()
   fred.transferAndVerifyAsync(coin1, greg.ethAddress)
   greg.transferAndVerifyAsync(coin2, fred.ethAddress)
-  currentBlock = await pollForBlockChange(fred, currentBlock, 20, 2000)
+  currentBlock = await fred.pollForBlockChange(currentBlock, 20, 2000)
 
   // They both try to exit and defraud each other
   await fred.exitAsync(coin1)
@@ -72,29 +83,30 @@ export async function complexDemo(t: test.Test) {
   await greg.exitAsync(coin2)
 
   // Wait a bit until the challenges are complete
-  await sleep(5000)
+  await sleep(7000)
 
   // Greg owns coin 1,4. Need to sort slot values since
   let slots = (await greg.getUserCoinsAsync()).map(c => c.slot).sort()
   t.equal((await greg.getUserCoinsAsync()).length, 2, 'Greg owns 2 coins')
-  t.deepEqual(slots, [coin4, coin1].sort(), "Greg owns the correct coins")
+  t.deepEqual(slots, [coin4, coin1].sort(), 'Greg owns the correct coins')
 
   // Fred owns coin 2,3,5
   slots = (await fred.getUserCoinsAsync()).map(c => c.slot).sort()
   t.equal((await fred.getUserCoinsAsync()).length, 3, 'fred owns 3 coins')
-  t.deepEqual(slots, [coin5, coin2, coin3].sort(), "Greg owns the correct coins")
+  t.deepEqual(slots, [coin5, coin2, coin3].sort(), 'Greg owns the correct coins')
 
   t.equal((await greg.getPlasmaCoinAsync(coin1)).state, 0, 'Greg succesfully challenged Fred')
   t.equal((await fred.getPlasmaCoinAsync(coin2)).state, 0, 'Fred succesfully challenged Greg')
 
   // Harry joins in the fun
-  const harry = PlasmaUser.createUser(
+  const harry = PlasmaUser.createOfflineUser(
+    ACCOUNTS.harry,
     web3Endpoint,
     ADDRESSES.root_chain,
     dappchainEndpoint,
-    ACCOUNTS.harry
+    eventsEndpoint,
+    'harry_db'
   )
-
   await harry.watchBlocks()
 
   // Previously, coin1 went from DEPOSITED -> EXITING and now is back to DEPOSITED. This should be reflected on the dappchain state as well. Build521 does not reset a coin to DEPOSITED after it is in EXITING and is challenged.
@@ -103,19 +115,19 @@ export async function complexDemo(t: test.Test) {
     greg.transferAndVerifyAsync(coin4, harry.ethAddress)
   })
   fred.transferAndVerifyAsync(coin3, harry.ethAddress)
-  currentBlock = await pollForBlockChange(fred, currentBlock, 20, 2000)
+  currentBlock = await fred.pollForBlockChange(currentBlock, 20, 2000)
 
   // Harry owns coin 1,3,4
   slots = (await harry.getUserCoinsAsync()).map(c => c.slot).sort()
   t.equal((await harry.getUserCoinsAsync()).length, 3, 'Harry owns 3 coins')
-  t.deepEqual(slots, [coin1,coin3,coin4].sort(), "Harry owns the correct coins")
+  t.deepEqual(slots, [coin1, coin3, coin4].sort(), 'Harry owns the correct coins')
 
   t.equal((await greg.getUserCoinsAsync()).length, 0, 'greg has no coins')
 
   // Fred owns coins 2,5
   slots = (await fred.getUserCoinsAsync()).map(c => c.slot).sort()
   t.equal((await fred.getUserCoinsAsync()).length, 2, 'Fred owns 2 coins')
-  t.deepEqual(slots, [coin2,coin5].sort(), "Fred owns the correct coins")
+  t.deepEqual(slots, [coin2, coin5].sort(), 'Fred owns the correct coins')
 
   try {
     // Let's try stealing some money
@@ -166,7 +178,7 @@ export async function complexDemo(t: test.Test) {
   t.equal((await fred.getUserCoinsAsync()).length, 3, 'Fred owns 3 coins')
   currentBlock = await harry.getCurrentBlockAsync()
   await harry.transferAndVerifyAsync(coin4, greg.ethAddress)
-  currentBlock = await pollForBlockChange(harry, currentBlock, 20, 2000)
+  currentBlock = await harry.pollForBlockChange(currentBlock, 20, 2000)
   await fred.depositETHAsync(new BN(10000))
   await sleep(3000)
   t.equal((await fred.getUserCoinsAsync()).length, 4, 'Fred owns 4 coins')
@@ -181,7 +193,7 @@ export async function complexDemo(t: test.Test) {
 
   currentBlock = await greg.getCurrentBlockAsync()
   greg.transferAndVerifyAsync(coin4, harry.ethAddress)
-  currentBlock = await pollForBlockChange(greg, currentBlock, 20, 2000)
+  currentBlock = await greg.pollForBlockChange(currentBlock, 20, 2000)
   await fred.depositETHAsync(new BN(10000))
   await sleep(3000)
   t.equal((await fred.getUserCoinsAsync()).length, 7, 'Fred owns 7 coins')
@@ -288,12 +300,9 @@ export async function complexDemo(t: test.Test) {
   t.equal((await fred.getUserCoinsAsync()).length, 6, 'Withdraw oracle for fred OK')
   t.equal((await harry.getUserCoinsAsync()).length, 0, 'Withdraw oracle for harry OK')
 
-  // Close the websocket, hacky :/
+  harry.disconnect()
   fred.disconnect()
   greg.disconnect()
-  harry.disconnect()
-  // @ts-ignore
-  web3.currentProvider.connection.close()
 
   t.end()
 }
