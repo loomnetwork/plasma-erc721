@@ -570,6 +570,7 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
         Transaction.TX memory txData = txBytes.getTx();
         require(txData.hash.ecverify(signature, challenges[slot][index].owner), "Invalid signature");
         require(txData.slot == slot, "Tx is referencing another slot");
+        require(blockNumber <= coins[slot].exit.prevBlock);
         require(blockNumber > challenges[slot][index].challengingBlockNumber);
         checkTxIncluded(txData.slot, txData.hash, blockNumber, proof);
     }
