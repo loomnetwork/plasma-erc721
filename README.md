@@ -27,7 +27,7 @@ export GOPATH=$GOPATH:`pwd`
 cd server
 npm install
 npm run test
-cd .. 
+cd ..
 
 cd loom_test
 make clean
@@ -37,12 +37,6 @@ make contracts
 make test
 cd ..
 
-cd loom_js_test
-yarn
-yarn build
-yarn copy-contracts
-cd ..
-
 LOOM_BIN=<ABSOLUTE_PATH_TO_LOOM> ./loom_integration_test.sh
 ```
 
@@ -50,11 +44,11 @@ LOOM_BIN=<ABSOLUTE_PATH_TO_LOOM> ./loom_integration_test.sh
 
 Please note different directories have different licenses. Please see license file in each folder respectively
 
-All derivitive works of this code must incluse this copyright header on every file 
+All derivative works of this code must include this copyright header on every file
 ```
 // Copyright Loom Network 2018 - All rights reserved, Dual licensed on GPLV3
 // Learn more about Loom DappChains at https://loomx.io
-// All derivitive works of this code must incluse this copyright header on every file 
+// All derivative works of this code must include this copyright header on every file
 ```
 
 * server directory -> GPLv3 [License](plasma_cash/License.md)
