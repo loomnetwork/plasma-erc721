@@ -47,7 +47,8 @@ deps:
 		github.com/hashicorp/go-plugin \
 		github.com/prometheus/client_golang/prometheus \
 		github.com/loomnetwork/mamamerkle \
-		github.com/miguelmota/go-solidity-sha3
+		github.com/miguelmota/go-solidity-sha3 \
+		github.com/loomnetwork/yubihsm-go
 
 clean:
 	go clean
