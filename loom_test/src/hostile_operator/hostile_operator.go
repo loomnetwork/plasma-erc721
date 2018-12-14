@@ -392,7 +392,7 @@ func saveAccount(ctx contract.Context, acct *Account) error {
 func (c *HostileOperator) GetCurrentBlockRequest(ctx contract.StaticContext, req *GetCurrentBlockRequest) (*GetCurrentBlockResponse, error) {
 	pbk := &PlasmaBookKeeping{}
 	ctx.Get(blockHeightKey, pbk)
-	return &GetCurrentBlockResponse{pbk.CurrentHeight}, nil
+	return &GetCurrentBlockResponse{BlockHeight: pbk.CurrentHeight}, nil
 }
 
 func (c *HostileOperator) GetBlockRequest(ctx contract.StaticContext, req *GetBlockRequest) (*GetBlockResponse, error) {
