@@ -102,7 +102,6 @@ function download_dappchain {
 if [[ "$IS_JENKINS_ENV" == true ]]; then
     # Kill off any plugins that weren't killed off by older builds
     pkill -f "hostileoperator.1.0.0" || true
-    pkill -f ganache || true
 fi
 
 # BUILD_TAG is usually only set by Jenkins, so when running locally just hardcode some value
