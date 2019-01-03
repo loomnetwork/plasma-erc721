@@ -608,7 +608,6 @@ contract RootChain is ERC721Receiver, ERC20Receiver {
     }
 
 
-    // Must challenge with a tx in between
 
     function checkBefore(
         uint64 slot,
