@@ -4,10 +4,11 @@ const RootChain = artifacts.require("RootChain");
 const ValidatorManagerContract = artifacts.require("ValidatorManagerContract");
 
 module.exports = async function(deployer, network, accounts) {
-
-    deployer.deploy(ValidatorManagerContract).then(async () => {
-        const vmc = await ValidatorManagerContract.deployed();
-        console.log(`ValidatorManagerContract deployed at address: ${vmc.address}`);
-    });
+    const vmc = await ValidatorManagerContract.deployed();
+    const cards = await CryptoCards.deployed();
+        
+    await vmc.toggleToken(cards.address);
 };
+
+
 
